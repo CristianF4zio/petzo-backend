@@ -49,6 +49,12 @@ public class GlobalExceptionHandler {
 		return problem(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_REFERENCE", "Referencia inválida");
 	}
 
+	// @Version clash: someone changed the row in between (e.g. an edit racing a moderation callback)
+	@ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+	ProblemDetail stale(Exception e) {
+		return problem(HttpStatus.CONFLICT, "STALE", "La publicación cambió; vuelve a intentarlo");
+	}
+
 	@ExceptionHandler(Exception.class)
 	ProblemDetail unexpected(Exception e) throws Exception {
 		if (e instanceof org.springframework.web.ErrorResponse || e instanceof org.springframework.security.access.AccessDeniedException) throw e;

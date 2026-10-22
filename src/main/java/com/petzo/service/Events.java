@@ -43,11 +43,11 @@ public class Events {
 		afterCommit(() -> {
 			Map<String, Object> body = new LinkedHashMap<>();
 			body.put("petId", pet.id);
-			body.put("updatedAt", String.valueOf(pet.updatedAt)); // echoed back so stale results are ignored
+			body.put("version", pet.version); // echoed back so results for an older version are ignored
 			body.put("name", pet.name);
 			body.put("species", pet.species);
 			body.put("description", String.valueOf(pet.description));
-			body.put("photos", pet.photos.stream().limit(3).map(p -> storage.publicUrl(p.storagePath)).toList());
+			body.put("photos", pet.photos.stream().limit(5).map(p -> storage.publicUrl(p.storagePath)).toList());
 			return send(props.n8nModerationUrl(), body);
 		});
 	}

@@ -38,7 +38,7 @@ public class AdminController {
 	List<PetDto> moderation() { return admin.moderationQueue(); }
 
 	@PostMapping("/pets/{id}/approve")
-	PetDto approve(@PathVariable UUID id) { return admin.approve(id); }
+	PetDto approve(@PathVariable UUID id, @RequestParam(required = false) Integer version) { return admin.approve(id, version); }
 
 	@PostMapping("/pets/{id}/reject")
 	PetDto reject(@PathVariable UUID id, @Valid @RequestBody RejectInput in) { return admin.reject(id, in.reason()); }

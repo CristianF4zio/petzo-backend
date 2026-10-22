@@ -21,6 +21,8 @@ public final class Repos {
 
 	public interface ProfileRepo extends JpaRepository<Profile, UUID> {
 		List<Profile> findByVerificationStatusOrderByUpdatedAtDesc(Types.VerificationStatus status);
+
+		java.util.Optional<Profile> findFirstByFoundationInstagramIgnoreCaseAndVerificationStatus(String handle, Types.VerificationStatus status);
 	}
 
 	public interface PetRepo extends JpaRepository<Pet, UUID>, JpaSpecificationExecutor<Pet> {

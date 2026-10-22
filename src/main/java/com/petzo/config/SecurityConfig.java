@@ -2,9 +2,6 @@ package com.petzo.config;
 
 import com.petzo.domain.Repos.ProfileRepo;
 import com.petzo.domain.Types.Role;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.UUID;
@@ -19,7 +16,6 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -32,14 +28,21 @@ public class SecurityConfig {
 				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(a -> a
 						.requestMatchers(HttpMethod.GET, "/api/pets", "/api/pets/*", "/api/municipalities").permitAll()
-						.requestMatchers("/internal/**", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						// Same matcher as MVC (decoded path), so /%69nternal/... cannot slip past the check
+						.requestMatchers("/internal/**").access((auth, ctx) -> new AuthorizationDecision(secretMatches(props.internalSecret(), ctx.getRequest().getHeader("x-internal-secret"))))
+						.requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/api/admin/**").access((auth, ctx) -> new AuthorizationDecision(
 								auth.get().getPrincipal() instanceof Jwt jwt
 										&& profiles.findById(UUID.fromString(jwt.getSubject())).map(p -> p.role == Role.admin && !p.suspended).orElse(false)))
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(o -> o.jwt(j -> {}))
-				.addFilterBefore(new InternalSecretFilter(props.internalSecret()), org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
 				.build();
+	}
+
+	/** /internal/** is for n8n and the Stagehand worker: shared secret, constant-time compare. */
+	static boolean secretMatches(String secret, String given) {
+		return secret != null && !secret.isEmpty() && given != null
+				&& MessageDigest.isEqual(secret.getBytes(StandardCharsets.UTF_8), given.getBytes(StandardCharsets.UTF_8));
 	}
 
 	// Only signed-in users: rejects anon keys and anonymous sign-ins
@@ -53,25 +56,5 @@ public class SecurityConfig {
 						? OAuth2TokenValidatorResult.success()
 						: OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Not a signed-in user", null))));
 		return decoder;
-	}
-
-	/** /internal/** is for n8n and the Stagehand worker: shared secret, constant-time compare. */
-	static class InternalSecretFilter extends OncePerRequestFilter {
-		private final byte[] secret;
-
-		InternalSecretFilter(String secret) { this.secret = secret.getBytes(StandardCharsets.UTF_8); }
-
-		@Override
-		protected boolean shouldNotFilter(HttpServletRequest req) { return !req.getRequestURI().startsWith("/internal/"); }
-
-		@Override
-		protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws java.io.IOException, jakarta.servlet.ServletException {
-			String given = req.getHeader("x-internal-secret");
-			if (secret.length == 0 || given == null || !MessageDigest.isEqual(secret, given.getBytes(StandardCharsets.UTF_8))) {
-				res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-				return;
-			}
-			chain.doFilter(req, res);
-		}
 	}
 }

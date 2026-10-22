@@ -31,7 +31,7 @@ public final class Dtos {
 
 	/** moderationReason/riskScore are filled only for the owner or an admin. */
 	public record PetDto(UUID id, Species species, String name, Short ageMonths, Sex sex, Types.Size size, Short municipalityId,
-			boolean vaccinated, boolean sterilized, boolean dewormed, String description, PetStatus status, PetSource source,
+			boolean vaccinated, boolean sterilized, boolean dewormed, String description, PetStatus status, PetSource source, int version,
 			List<PhotoDto> photos, PublisherDto publisher, String moderationReason, Short riskScore, Instant createdAt, Instant updatedAt) {}
 
 	public record PetInput(@NotNull Species species, @NotBlank @Size(max = 60) String name, @NotNull @Min(0) @Max(360) Short ageMonths,
@@ -70,7 +70,7 @@ public final class Dtos {
 	public record MatchResult(List<MatchDto> matches, boolean aiAvailable) {}
 
 	// Internal (n8n + Stagehand worker, B3)
-	public record ModerationResult(@Min(0) @Max(100) int riskScore, @Size(max = 500) String reason, String updatedAt, long inputTokens, long outputTokens) {}
+	public record ModerationResult(@Min(0) @Max(100) int riskScore, @Size(max = 500) String reason, @NotNull Integer version, long inputTokens, long outputTokens) {}
 
 	public record ImportedPet(@Size(max = 60) String name, Species species, Sex sex, Types.Size size, @Min(0) @Max(360) Short ageMonths,
 			@Size(max = 2000) String description, @NotNull List<String> photoUrls, @Size(max = 500) String sourceUrl) {}

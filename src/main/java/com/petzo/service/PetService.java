@@ -41,8 +41,10 @@ public class PetService {
 	private final PetRepo pets;
 	private final StorageClient storage;
 	private final Events events;
+	private final jakarta.persistence.EntityManager em;
 
-	public PetService(PetRepo pets, StorageClient storage, Events events) {
+	public PetService(PetRepo pets, StorageClient storage, Events events, jakarta.persistence.EntityManager em) {
+		this.em = em;
 		this.pets = pets;
 		this.storage = storage;
 		this.events = events;
@@ -136,6 +138,8 @@ public class PetService {
 		photo.storagePath = path;
 		photo.position = (short) pet.photos.size();
 		pet.photos.add(photo);
+		// Photo rows do not touch the pets row: bump the version so older moderation results are ignored
+		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
 		resubmit(pet);
 		return toDto(pets.saveAndFlush(pet), true, null);
 	}
@@ -146,8 +150,9 @@ public class PetService {
 		if (pet.photos.size() == 1 && pet.status != PetStatus.draft) throw ApiException.conflict("PHOTOS_REQUIRED", "La publicación necesita al menos una foto");
 		pet.photos.remove(photo);
 		for (short i = 0; i < pet.photos.size(); i++) pet.photos.get(i).position = i;
+		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
 		pets.saveAndFlush(pet);
-		storage.delete(List.of(photo.storagePath));
+		storage.deleteAfterCommit(List.of(photo.storagePath));
 		return toDto(pet, true, null);
 	}
 
@@ -201,7 +206,7 @@ public class PetService {
 		var publisher = new PublisherDto(o.id, name, o.avatarUrl, o.municipalityId, o.accountType == AccountType.foundation, o.isVerifiedFoundation(), publisherCount);
 		var photos = p.photos.stream().map(ph -> new PhotoDto(ph.id, storage.publicUrl(ph.storagePath))).toList();
 		return new PetDto(p.id, p.species, p.name, p.ageMonths, p.sex, p.size, p.municipalityId, p.vaccinated, p.sterilized, p.dewormed,
-				p.description, p.status, p.source, photos, publisher, privileged ? p.moderationReason : null, privileged ? p.riskScore : null,
+				p.description, p.status, p.source, p.version, photos, publisher, privileged ? p.moderationReason : null, privileged ? p.riskScore : null,
 				p.createdAt, p.updatedAt);
 	}
 }

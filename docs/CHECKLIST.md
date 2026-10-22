@@ -35,3 +35,4 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] Colección `http/petzo.http` (local y producción)
 - [ ] Repo en GitHub + deploy en Render (Cris)
 - [ ] Colección corrida contra la URL pública
+- [x] Revisión de seguridad: 10 de 11 hallazgos corregidos (V3: `version` + permisos por columna; `/internal` con el mismo matcher que MVC; admin solo aprueba `pending_review`)

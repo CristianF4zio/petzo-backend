@@ -53,12 +53,14 @@ class InternalTest {
 		return id;
 	}
 
-	String updatedAt(String petId) {
-		return String.valueOf(jdbc.queryForObject("select updated_at from pets where id = ?::uuid", java.sql.Timestamp.class, petId).toInstant());
+	int version(String petId) {
+		return jdbc.queryForObject("select version from pets where id = ?::uuid", Integer.class, petId);
 	}
 
 	@Test
 	void secretIsRequired() throws Exception {
+		// encoded path must not bypass the secret (decoded by MVC, checked by the same matcher)
+		mvc.perform(get(java.net.URI.create("/%69nternal/imports/next"))).andExpect(status().is4xxClientError());
 		mvc.perform(get("/internal/imports/next")).andExpect(status().isUnauthorized());
 		mvc.perform(get("/internal/imports/next").header("x-internal-secret", "wrong")).andExpect(status().isUnauthorized());
 		mvc.perform(get("/internal/imports/next").header("x-internal-secret", SECRET)).andExpect(status().is2xxSuccessful());
@@ -68,14 +70,29 @@ class InternalTest {
 	void moderationApprovesLowRiskAndKeepsHighRiskInQueue() throws Exception {
 		UUID owner = user(false);
 		String low = pendingPet(owner), high = pendingPet(owner);
-		mvc.perform(withJson(post("/internal/pets/" + low + "/moderation-result"), "{\"riskScore\":10,\"reason\":\"ok\",\"updatedAt\":\"" + updatedAt(low) + "\",\"inputTokens\":900,\"outputTokens\":60}")
+		mvc.perform(withJson(post("/internal/pets/" + low + "/moderation-result"), "{\"riskScore\":10,\"reason\":\"ok\",\"version\":" + version(low) + ",\"inputTokens\":900,\"outputTokens\":60}")
 				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.status").value("approved"));
-		mvc.perform(withJson(post("/internal/pets/" + high + "/moderation-result"), "{\"riskScore\":85,\"reason\":\"Foto genérica de internet\",\"updatedAt\":\"" + updatedAt(high) + "\",\"inputTokens\":900,\"outputTokens\":60}")
+		mvc.perform(withJson(post("/internal/pets/" + high + "/moderation-result"), "{\"riskScore\":85,\"reason\":\"Foto genérica de internet\",\"version\":" + version(high) + ",\"inputTokens\":900,\"outputTokens\":60}")
 				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.status").value("pending_review"));
 		mvc.perform(get("/api/me/pets").with(as(owner))).andExpect(jsonPath("$[?(@.id=='" + high + "')].moderationReason").value("Foto genérica de internet"));
 		// stale result (pet edited after n8n read it) is ignored
-		mvc.perform(withJson(post("/internal/pets/" + high + "/moderation-result"), "{\"riskScore\":5,\"reason\":\"ok\",\"updatedAt\":\"2000-01-01T00:00:00Z\",\"inputTokens\":1,\"outputTokens\":1}")
+		mvc.perform(withJson(post("/internal/pets/" + high + "/moderation-result"), "{\"riskScore\":5,\"reason\":\"ok\",\"version\":999,\"inputTokens\":1,\"outputTokens\":1}")
 				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.status").value("ignored"));
+	}
+
+	@Test
+	void photoChangesBumpVersionSoOldModerationIsIgnored() throws Exception {
+		UUID owner = user(false), boss = user(true);
+		String pet = pendingPet(owner);
+		int before = version(pet);
+		mvc.perform(withJson(post("/api/pets/" + pet + "/photos"), "{\"path\":\"pets/" + pet + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)));
+		org.assertj.core.api.Assertions.assertThat(version(pet)).isGreaterThan(before);
+		mvc.perform(withJson(post("/internal/pets/" + pet + "/moderation-result"), "{\"riskScore\":5,\"reason\":\"ok\",\"version\":" + before + ",\"inputTokens\":1,\"outputTokens\":1}")
+				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.status").value("ignored"));
+		// admin: stale version and non-pending pets are refused
+		mvc.perform(post("/api/admin/pets/" + pet + "/approve?version=" + before).with(as(boss))).andExpect(jsonPath("$.code").value("STALE"));
+		mvc.perform(post("/api/admin/pets/" + pet + "/approve?version=" + version(pet)).with(as(boss))).andExpect(jsonPath("$.status").value("approved"));
+		mvc.perform(post("/api/admin/pets/" + pet + "/approve").with(as(boss))).andExpect(jsonPath("$.code").value("INVALID_STATUS"));
 	}
 
 	@Test

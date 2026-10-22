@@ -37,7 +37,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const msg = $input.first().json;\nconst text = (msg.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim().replace(/^```(?:json)?\\s*|\\s*```$/g, '');\n// Anything unparseable stays in the admin queue (risk 100)\nlet r = { risk: 100, reason: 'No se pudo evaluar automáticamente' };\ntry {\n  const j = JSON.parse(text);\n  if (Number.isInteger(j.risk) && j.risk >= 0 && j.risk <= 100) r = { risk: j.risk, reason: String(j.reason || '').slice(0, 500) };\n} catch (e) {}\nconst src = $('Webhook').first().json.body;\nreturn [{ json: { petId: src.petId, riskScore: r.risk, reason: r.reason, updatedAt: src.updatedAt, inputTokens: msg.usage?.input_tokens ?? 0, outputTokens: msg.usage?.output_tokens ?? 0 } }];"
+        "jsCode": "const msg = $input.first().json;\nconst text = (msg.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim().replace(/^```(?:json)?\\s*|\\s*```$/g, '');\n// Anything unparseable stays in the admin queue (risk 100)\nlet r = { risk: 100, reason: 'No se pudo evaluar automáticamente' };\ntry {\n  const j = JSON.parse(text);\n  if (Number.isInteger(j.risk) && j.risk >= 0 && j.risk <= 100) r = { risk: j.risk, reason: String(j.reason || '').slice(0, 500) };\n} catch (e) {}\nconst src = $('Webhook').first().json.body;\nreturn [{ json: { petId: src.petId, riskScore: r.risk, reason: r.reason, version: src.version, inputTokens: msg.usage?.input_tokens ?? 0, outputTokens: msg.usage?.output_tokens ?? 0 } }];"
       },
       "name": "Parse result",
       "type": "n8n-nodes-base.code",
@@ -52,7 +52,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ riskScore: $json.riskScore, reason: $json.reason, updatedAt: $json.updatedAt, inputTokens: $json.inputTokens, outputTokens: $json.outputTokens }) }}",
+        "jsonBody": "={{ JSON.stringify({ riskScore: $json.riskScore, reason: $json.reason, version: $json.version, inputTokens: $json.inputTokens, outputTokens: $json.outputTokens }) }}",
         "options": {}
       },
       "name": "Petzo callback",

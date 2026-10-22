@@ -42,7 +42,7 @@ public class InternalService {
 	private final Events events;
 	private final JdbcTemplate jdbc;
 	private final ObjectMapper json;
-	private final HttpClient download = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NORMAL).build();
+	private final HttpClient download = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
 
 	public InternalService(PetRepo pets, ProfileRepo profiles, ImportJobRepo jobs, StorageClient storage, AiService ai, Events events, JdbcTemplate jdbc, ObjectMapper json) {
 		this.pets = pets;
@@ -57,12 +57,12 @@ public class InternalService {
 
 	/**
 	 * Low risk → approved; otherwise it stays in the admin queue with the reason.
-	 * Ignored if the pet changed after n8n read it (stale result) or left review.
+	 * Ignored if the pet changed after n8n read it (version) or left review; a concurrent edit fails with STALE.
 	 */
 	public String moderationResult(UUID petId, ModerationResult in) {
 		ai.record("moderation", "pet", petId, in.inputTokens(), in.outputTokens(), json.valueToTree(in));
 		Pet pet = pets.findById(petId).orElseThrow(ApiException::notFound);
-		if (pet.status != PetStatus.pending_review || (in.updatedAt() != null && !in.updatedAt().equals(String.valueOf(pet.updatedAt)))) return "ignored";
+		if (pet.status != PetStatus.pending_review || in.version() != pet.version) return "ignored";
 		pet.riskScore = (short) Math.max(0, Math.min(100, in.riskScore()));
 		pet.moderationReason = in.reason();
 		if (pet.riskScore < RISK_THRESHOLD) {
@@ -95,11 +95,15 @@ public class InternalService {
 				rs -> rs.next() ? Optional.of(Map.<String, Object>of("id", rs.getObject(1), "instagramHandle", rs.getString(2))) : Optional.empty());
 	}
 
-	/** Drafts belong to the foundation with that Instagram handle, else to the admin who launched the import. */
+	/**
+	 * Drafts belong to the verified foundation with that Instagram handle, else to the admin who launched the import.
+	 * Not transactional: image downloads (slow) must not hold a DB connection; each save commits on its own.
+	 */
+	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 	public int addImportedPets(UUID jobId, ImportedPets in) {
 		ImportJob job = jobs.findById(jobId).orElseThrow(ApiException::notFound);
 		if (job.status != ImportStatus.running) throw ApiException.conflict("INVALID_STATUS", "El trabajo no está en curso");
-		Profile owner = profiles.findAll().stream().filter(p -> job.instagramHandle.equalsIgnoreCase(p.foundationInstagram)).findFirst()
+		Profile owner = profiles.findFirstByFoundationInstagramIgnoreCaseAndVerificationStatus(job.instagramHandle, VerificationStatus.verified)
 				.orElseGet(() -> profiles.findById(job.requestedBy).orElseThrow());
 		int created = 0;
 		for (ImportedPet ip : in.pets()) {
@@ -115,19 +119,19 @@ public class InternalService {
 			pet.status = PetStatus.draft;
 			pet.source = PetSource.instagram;
 			pet.sourceUrl = ip.sourceUrl();
-			pets.saveAndFlush(pet);
+			Pet saved = pets.save(pet);
 			for (String url : ip.photoUrls().stream().limit(5).toList()) {
 				fetchImage(url).ifPresent(bytes -> {
-					String path = "pets/" + pet.id + "/" + UUID.randomUUID() + ".jpg";
+					String path = "pets/" + saved.id + "/" + UUID.randomUUID() + ".jpg";
 					storage.upload(path, bytes, "image/jpeg");
 					PetPhoto ph = new PetPhoto();
-					ph.pet = pet;
+					ph.pet = saved;
 					ph.storagePath = path;
-					ph.position = (short) pet.photos.size();
-					pet.photos.add(ph);
+					ph.position = (short) saved.photos.size();
+					saved.photos.add(ph);
 				});
 			}
-			pets.save(pet);
+			if (!saved.photos.isEmpty()) pets.save(saved);
 			created++;
 		}
 		job.petsCreated += created;
@@ -143,15 +147,18 @@ public class InternalService {
 		ai.record("import", "import_job", jobId, in.inputTokens(), in.outputTokens(), json.valueToTree(Map.of("status", in.status(), "pets", job.petsCreated)));
 	}
 
-	// SSRF guard: only https images from Instagram's CDNs, max 5 MB
+	// SSRF guard: only https images from Instagram's CDNs (no redirects elsewhere), read at most 5 MB
 	private Optional<byte[]> fetchImage(String url) {
 		try {
 			URI uri = URI.create(url);
 			String host = String.valueOf(uri.getHost());
 			if (!"https".equals(uri.getScheme()) || !(host.endsWith(".cdninstagram.com") || host.endsWith(".fbcdn.net"))) return Optional.empty();
-			HttpResponse<byte[]> res = download.send(HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(20)).build(), HttpResponse.BodyHandlers.ofByteArray());
-			if (res.statusCode() != 200 || res.body().length > 5_000_000) return Optional.empty();
-			return Optional.of(res.body());
+			HttpResponse<java.io.InputStream> res = download.send(HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(20)).build(), HttpResponse.BodyHandlers.ofInputStream());
+			try (var body = res.body()) {
+				if (res.statusCode() != 200) return Optional.empty();
+				byte[] bytes = body.readNBytes(5_000_001);
+				return bytes.length > 5_000_000 ? Optional.empty() : Optional.of(bytes);
+			}
 		} catch (Exception e) {
 			log.warn("image download failed: {}", e.getMessage());
 			return Optional.empty();

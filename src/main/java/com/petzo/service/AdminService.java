@@ -42,8 +42,11 @@ public class AdminService {
 		return pets.findByStatusOrderByCreatedAt(PetStatus.pending_review).stream().map(p -> petService.toDto(p, true, null)).toList();
 	}
 
-	public PetDto approve(UUID id) {
+	/** version = the one shown in the queue; a pet edited since then must be reviewed again. */
+	public PetDto approve(UUID id, Integer version) {
 		Pet pet = pets.findById(id).orElseThrow(ApiException::notFound);
+		if (pet.status != PetStatus.pending_review) throw ApiException.conflict("INVALID_STATUS", "Solo se aprueban publicaciones en revisión");
+		if (version != null && version != pet.version) throw ApiException.conflict("STALE", "La publicación cambió; recarga la cola");
 		pet.status = PetStatus.approved;
 		pet.moderationReason = null;
 		events.petStatusChanged(pets.saveAndFlush(pet));
@@ -53,12 +56,13 @@ public class AdminService {
 	/** Rejected photos would stay public (bucket is public), so they are deleted (SPEC §15). */
 	public PetDto reject(UUID id, String reason) {
 		Pet pet = pets.findById(id).orElseThrow(ApiException::notFound);
+		if (pet.status != PetStatus.pending_review && pet.status != PetStatus.approved) throw ApiException.conflict("INVALID_STATUS", "No se puede rechazar en este estado");
 		List<String> paths = pet.photos.stream().map(ph -> ph.storagePath).toList();
 		pet.status = PetStatus.rejected;
 		pet.moderationReason = reason.trim();
 		pet.photos.clear();
 		pets.saveAndFlush(pet);
-		storage.delete(paths);
+		storage.deleteAfterCommit(paths);
 		events.petStatusChanged(pet);
 		return petService.toDto(pet, true, null);
 	}

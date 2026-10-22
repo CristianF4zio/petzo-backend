@@ -21,6 +21,8 @@ public class Pet {
 
 	@Id @GeneratedValue(strategy = GenerationType.UUID) public UUID id;
 
+	@Version public int version;
+
 	// EAGER: entities use public fields, which lazy proxies do not intercept; the owner is always shown anyway
 	@ManyToOne(fetch = FetchType.EAGER, optional = false) @JoinColumn(name = "owner_id")
 	public Profile owner;

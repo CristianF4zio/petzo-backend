@@ -154,7 +154,7 @@ class ApiTest {
 		mvc.perform(post("/api/pets/" + id + "/photos/upload-url").with(as(owner))).andExpect(jsonPath("$.code").value("TOO_MANY_PHOTOS"));
 		pet = call(get("/api/pets/" + id).with(as(owner)), 200);
 		mvc.perform(delete("/api/pets/" + id + "/photos/" + pet.get("photos").get(0).get("id").asText()).with(as(owner))).andExpect(jsonPath("$.photos.length()").value(4));
-		verify(storage).delete(anyList());
+		verify(storage).deleteAfterCommit(anyList());
 	}
 
 	@Test
@@ -182,7 +182,7 @@ class ApiTest {
 
 		mvc.perform(withJson(post("/api/admin/pets/" + id + "/reject"), "{\"reason\":\"Fotos de internet\"}").with(as(boss)))
 				.andExpect(jsonPath("$.status").value("rejected")).andExpect(jsonPath("$.photos.length()").value(0));
-		verify(storage).delete(argThat(l -> l.size() == 1));
+		verify(storage).deleteAfterCommit(argThat(l -> l.size() == 1));
 		mvc.perform(get("/api/me/pets").with(as(owner))).andExpect(jsonPath("$[0].moderationReason").value("Fotos de internet"));
 
 		call(withJson(post("/api/me/foundation-request"), "{\"foundationName\":\"Patas del Ávila\",\"foundationInstagram\":\"@patas\"}").with(as(owner)), 200);

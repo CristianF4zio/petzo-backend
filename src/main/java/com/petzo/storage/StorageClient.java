@@ -60,6 +60,18 @@ public class StorageClient {
 		}
 	}
 
+	/** Deletes only once the DB change committed, so a rollback never leaves rows pointing at missing files. */
+	public void deleteAfterCommit(List<String> paths) {
+		if (paths.isEmpty()) return;
+		if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+			delete(paths);
+			return;
+		}
+		org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+			@Override public void afterCommit() { delete(paths); }
+		});
+	}
+
 	public void delete(List<String> paths) {
 		if (paths.isEmpty()) return;
 		http.method(org.springframework.http.HttpMethod.DELETE)

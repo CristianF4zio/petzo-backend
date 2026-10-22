@@ -21,4 +21,4 @@ Dos flujos. La API los llama por webhook; ambos exigen el header `x-internal-sec
 
 ## Si algo falla
 
-Nada se pierde: si n8n o la IA no responden, la publicación sigue en `pending_review` y aparece en `GET /api/admin/moderation`. Resultados viejos (la mascota se editó después) se ignoran comparando `updatedAt`. Los tokens de cada moderación se registran en `ai_logs`.
+Nada se pierde: si n8n o la IA no responden, la publicación sigue en `pending_review` y aparece en `GET /api/admin/moderation`. Resultados viejos (la mascota se editó después) se ignoran comparando `version` (la API la sube en cada cambio, incluidas las fotos). Los tokens de cada moderación se registran en `ai_logs`.
