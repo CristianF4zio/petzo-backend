@@ -1,0 +1,49 @@
+# Local secrets live in .env (KEY=value), loaded as properties. In Render they are real env vars.
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate.default_batch_fetch_size: 50
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    # Supabase already had V1 (applied by the CLI); an empty DB still runs V1 normally
+    baseline-on-migrate: true
+    baseline-version: 1
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${SUPABASE_URL}/auth/v1/.well-known/jwks.json
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+petzo:
+  supabase-url: ${SUPABASE_URL}
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+  internal-secret: ${INTERNAL_SECRET}
+  anthropic-api-key: ${ANTHROPIC_API_KEY:}
+  ai-model: ${AI_MODEL:claude-haiku-5-5}
+  ai-daily-token-cap: ${AI_DAILY_TOKEN_CAP:2000000}
+  n8n-moderation-url: ${N8N_MODERATION_WEBHOOK_URL:}
+  n8n-notify-url: ${N8N_NOTIFY_WEBHOOK_URL:}
