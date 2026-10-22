@@ -1,0 +1,134 @@
+# Petzo API — run with the VS Code REST Client or IntelliJ HTTP client.
+# Pick the environment in http-client.env.json (local / production). {{token}} = a Supabase access token.
+
+### Health
+GET {{api}}/actuator/health
+
+### Municipalities (public)
+GET {{api}}/api/municipalities
+
+### Catalog (public; size accepts a comma list)
+GET {{api}}/api/pets?species=dog&size=small,medium&ageMin=0&ageMax=60&page=1
+
+### Pet detail (public if approved)
+GET {{api}}/api/pets/{{petId}}
+
+### Me
+GET {{api}}/api/me
+Authorization: Bearer {{token}}
+
+### Complete profile
+PUT {{api}}/api/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"fullName": "Andreína Márquez", "whatsapp": "0414 987 6543", "municipalityId": 3}
+
+### Foundation request
+POST {{api}}/api/me/foundation-request
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"foundationName": "Refugio Patas del Ávila", "foundationInstagram": "@patasdelavila", "foundationBio": "Rescatamos perros en Libertador"}
+
+### Create pet (pending_review, respects plan limit)
+POST {{api}}/api/pets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"species": "dog", "name": "Toby", "ageMonths": 14, "sex": "male", "size": "medium", "municipalityId": 2, "vaccinated": true, "sterilized": true, "dewormed": false, "description": "Tranquilo en casa y feliz en la calle."}
+
+### Photo upload URL → PUT the JPEG to signedUrl, then register the path
+POST {{api}}/api/pets/{{petId}}/photos/upload-url
+Authorization: Bearer {{token}}
+
+### Register uploaded photo (triggers moderation)
+POST {{api}}/api/pets/{{petId}}/photos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"path": "pets/{{petId}}/REPLACE.jpg"}
+
+### Pause / republish / adopted
+PATCH {{api}}/api/pets/{{petId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"status": "paused"}
+
+### My pets
+GET {{api}}/api/me/pets
+Authorization: Bearer {{token}}
+
+### Favorite
+POST {{api}}/api/favorites/{{petId}}
+Authorization: Bearer {{token}}
+
+### Report
+POST {{api}}/api/pets/{{petId}}/reports
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reason": "Fotos de internet"}
+
+### Adoption request (AI pre-evaluation runs async)
+POST {{api}}/api/pets/{{petId}}/requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"answers": {"vivienda": "Casa", "otrasMascotas": "No"}, "motivation": "Tengo patio grande y tiempo para pasearlo cada día."}
+
+### Requests for my pet (owner)
+GET {{api}}/api/pets/{{petId}}/requests
+Authorization: Bearer {{token}}
+
+### Approve request
+POST {{api}}/api/requests/{{requestId}}/approve
+Authorization: Bearer {{token}}
+
+### WhatsApp contact (only after approval)
+GET {{api}}/api/requests/{{requestId}}/contact
+Authorization: Bearer {{token}}
+
+### Lifestyle questionnaire
+PUT {{api}}/api/me/lifestyle
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"housing": "apartamento", "timeAtHome": "medio", "kids": false, "otherPets": true, "experience": "algo"}
+
+### AI match
+POST {{api}}/api/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"species": "cat"}
+
+### Admin: moderation queue
+GET {{api}}/api/admin/moderation
+Authorization: Bearer {{token}}
+
+### Admin: approve / reject (reject deletes photos)
+POST {{api}}/api/admin/pets/{{petId}}/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reason": "Las fotos aparecen en otras páginas de internet."}
+
+### Admin: stats
+GET {{api}}/api/admin/stats
+Authorization: Bearer {{token}}
+
+### Admin: launch Instagram import
+POST {{api}}/api/admin/imports
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"instagramHandle": "@patasdelavila"}
+
+### Internal (n8n): moderation result
+POST {{api}}/internal/pets/{{petId}}/moderation-result
+x-internal-secret: {{internalSecret}}
+Content-Type: application/json
+
+{"riskScore": 12, "reason": "Fotos propias y descripción coherente", "updatedAt": null, "inputTokens": 900, "outputTokens": 60}
