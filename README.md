@@ -1,6 +1,6 @@
 # Petzo backend
 
-API REST de Petzo (adopción de perros y gatos en Gran Caracas): Java 21 + Spring Boot 3.5, Supabase (Postgres + Auth + Storage), Claude Haiku 5.5, n8n y un worker de Stagehand. Especificación: [`docs/SPEC.md`](docs/SPEC.md).
+API REST de Petzo (adopción de perros y gatos en Gran Caracas): Java 21 + Spring Boot 3.5, Supabase (Postgres + Auth + Storage), Claude Haiku 5.5, n8n y un worker de Stagehand. Especificación: `SPEC.md` en la carpeta que agrupa los tres repos.
 
 ## Estructura
 

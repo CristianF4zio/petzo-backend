@@ -1,6 +1,6 @@
 # Petzo backend
 
-API for Petzo (dog/cat adoption, Gran Caracas). Source of truth: `docs/SPEC.md` — read only the section you need (§14 data, §15 RLS, §16 sprints, §17 endpoints/rules). Frontend lives in the `petzo-frontend` repo (do not touch it from here).
+API for Petzo (dog/cat adoption, Gran Caracas). Source of truth: `../SPEC.md` (workspace root, outside the repo) — read only the section you need (§14 data, §15 RLS, §16 sprints, §17 endpoints/rules). Frontend lives in the `petzo-frontend` repo (do not touch it from here).
 
 ## Stack
 - Java 21, Spring Boot 3.5.x (Maven wrapper), JPA (`ddl-auto=validate`), Flyway (`src/main/resources/db/migration`).
