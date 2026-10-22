@@ -10,7 +10,7 @@ API for Petzo (dog/cat adoption, Gran Caracas). Source of truth: `docs/SPEC.md` 
 ## Commands (Git Bash)
 - JDK: `export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21.0.12.101-hotspot"; export PATH="$JAVA_HOME/bin:$PATH"`
 - Tests: `./mvnw -q test` (Testcontainers; Docker Desktop must run)
-- Run: `./mvnw spring-boot:run` (reads `.env`; Swagger at `/swagger-ui.html`)
+- Run: `./mvnw spring-boot:run` (reads `.env`, local port 8090; Swagger at `/swagger-ui.html`)
 
 ## Rules
 - Supabase only authenticates; Spring Security validates the JWT. `/api/admin/**` needs `profiles.role = 'admin'`; suspended → 403.
@@ -24,4 +24,5 @@ API for Petzo (dog/cat adoption, Gran Caracas). Source of truth: `docs/SPEC.md` 
 
 ## Workflow
 - Sprints B0–B4 (§16). Short plan, then build; commit + push each piece; tests green before closing.
+- Track tasks in `docs/CHECKLIST.md`.
 - Log skills in `docs/SKILLS_LOG.md` and subagents in `docs/AGENTS_LOG.md` (real uses only).

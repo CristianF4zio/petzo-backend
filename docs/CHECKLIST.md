@@ -1,0 +1,37 @@
+# Checklist backend
+
+Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende de Cris · `[ ]` pendiente.
+
+## B0 Supabase + modelo — listo cuando la migración corre en Supabase y un registro nuevo crea su perfil
+- [x] Proyecto Supabase, Google OAuth, bucket `pet-photos` (público, subida por URL firmada)
+- [x] Repo con Spring Initializr (Boot 3.5.16, Java 21)
+- [x] Flyway V1: enums, 10 tablas de §14, índices, `updated_at`, RLS solo SELECT, seed de 11 municipios (baseline del esquema existente)
+- [x] Flyway V2: trigger `auth.users` → `profiles` (D-26) + backfill; RLS en `flyway_schema_history`
+- [x] Verificado en la nube: registro nuevo crea su perfil
+- [x] `CLAUDE.md`, `.env.example`, logs
+
+## B1 API core — listo cuando los tests de controladores y servicios están en verde
+- [x] Resource Server con JWKS (ES256), admin por `profiles.role`, suspendidos 403
+- [x] Perfil (`/api/me`), solicitud de fundación, avatar
+- [x] Mascotas: crear (pending_review + límite de plan), editar (vuelve a moderación), estados, fotos con URL firmada (1 a 5)
+- [x] Catálogo público con filtros y paginado de 20; detalle sin WhatsApp ni datos de moderación
+- [x] Favoritos, reportes, endpoints admin, Swagger
+- [x] Tests MockMvc + Testcontainers en verde
+
+## B2 Solicitudes + IA — listo cuando una solicitud real devuelve resumen y puntaje
+- [x] Solicitudes (una activa por mascota y adoptante), aprobar/rechazar, contacto WhatsApp solo tras aprobar
+- [x] Pre-evaluación async y match con Haiku 5.5 (SDK Java), `ai_logs` y tope diario
+- [~] Prueba con `ANTHROPIC_API_KEY` real (Cris)
+
+## B3 Automatizaciones — listo cuando publicar dispara moderación + correo y una importación crea borradores
+- [x] `/internal/*` con `x-internal-secret`; resultados de moderación viejos se ignoran
+- [x] Flujos n8n 1 y 2 exportados (`n8n/`), webhooks firmados con el mismo secreto
+- [x] Worker Stagehand (`stagehand-worker/`) + `import_jobs`
+- [~] Importar flujos en n8n y corrida real de moderación, correo e importación (Cris)
+
+## B4 API lista — paso al frontend
+- [x] Suite completa en verde
+- [x] Dockerfile multi-stage (probado en local contra la nube)
+- [x] Colección `http/petzo.http` (local y producción)
+- [ ] Repo en GitHub + deploy en Render (Cris)
+- [ ] Colección corrida contra la URL pública
