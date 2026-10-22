@@ -85,6 +85,10 @@ public class ApiController {
 	@PutMapping("/pets/{id}")
 	PetDto update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PetInput in) { return pets.update(current.require(jwt), id, in); }
 
+	@DeleteMapping("/pets/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void deleteDraft(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) { pets.deleteDraft(current.require(jwt), id); }
+
 	@PatchMapping("/pets/{id}/status")
 	PetDto status(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody StatusInput in) {
 		return pets.changeStatus(current.require(jwt), id, in.status());
@@ -97,6 +101,12 @@ public class ApiController {
 	@ResponseStatus(HttpStatus.CREATED)
 	PetDto addPhoto(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PhotoInput in) {
 		return pets.addPhoto(current.require(jwt), id, in.path());
+	}
+
+	/** Whole gallery in order (first = cover); the app uses this instead of single add/delete. */
+	@PutMapping("/pets/{id}/photos")
+	PetDto replacePhotos(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PhotosInput in) {
+		return pets.replacePhotos(current.require(jwt), id, in.paths());
 	}
 
 	@DeleteMapping("/pets/{id}/photos/{photoId}")

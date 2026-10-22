@@ -91,7 +91,9 @@ public class PetService {
 		Pet pet = new Pet();
 		pet.owner = me;
 		apply(pet, in);
-		pet.status = PetStatus.pending_review; // moderation runs once photos are attached
+		// Draft until the owner attaches photos and submits (PATCH status pending_review), so moderation runs once
+		// and a pet whose uploads failed can still be deleted instead of holding a plan slot
+		pet.status = PetStatus.draft;
 		return toDto(pets.saveAndFlush(pet), true, null);
 	}
 
@@ -121,7 +123,7 @@ public class PetService {
 
 	public UploadUrl uploadUrl(Profile me, UUID id) {
 		Pet pet = editable(me, id);
-		if (pet.photos.size() >= MAX_PHOTOS) throw ApiException.conflict("TOO_MANY_PHOTOS", "Máximo 5 fotos");
+		// No count check here: a full gallery may upload a replacement before PUT /photos drops the old one (max 5 is enforced on save)
 		var signed = storage.signUpload("pets/" + pet.id + "/" + UUID.randomUUID() + ".jpg", false);
 		return new UploadUrl(signed.path(), signed.signedUrl(), signed.token());
 	}
@@ -151,8 +153,50 @@ public class PetService {
 		pet.photos.remove(photo);
 		for (short i = 0; i < pet.photos.size(); i++) pet.photos.get(i).position = i;
 		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+		resubmit(pet); // the bump discards the in-flight moderation result, so moderate the new version
 		pets.saveAndFlush(pet);
 		storage.deleteAfterCommit(List.of(photo.storagePath));
+		return toDto(pet, true, null);
+	}
+
+	/** Only drafts (Instagram imports the owner does not want); published pets are paused or marked adopted instead. */
+	public void deleteDraft(Profile me, UUID id) {
+		Pet pet = own(me, id);
+		if (pet.status != PetStatus.draft) throw ApiException.conflict("INVALID_STATUS", "Solo se pueden eliminar borradores");
+		List<String> paths = pet.photos.stream().map(ph -> ph.storagePath).toList();
+		pets.delete(pet);
+		storage.deleteAfterCommit(paths);
+	}
+
+	/**
+	 * Sets the whole gallery in one step (first = cover): kept paths stay, new ones must already be uploaded, missing ones are deleted.
+	 * One version bump and at most one moderation run, whatever changed.
+	 */
+	public PetDto replacePhotos(Profile me, UUID id, List<String> paths) {
+		Pet pet = editable(me, id);
+		var invalid = new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_PHOTOS", "Foto inválida");
+		if (Set.copyOf(paths).size() != paths.size()) throw invalid;
+		Set<String> current = pet.photos.stream().map(ph -> ph.storagePath).collect(java.util.stream.Collectors.toSet());
+		List<String> added = paths.stream().filter(p -> !current.contains(p)).toList();
+		for (String path : added) {
+			if (!Pattern.matches("pets/" + pet.id + "/[0-9a-f-]{36}\\.jpg", path)) throw invalid;
+			if (!storage.exists(path)) throw new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_PHOTOS", "La foto no se subió");
+		}
+		List<String> removed = current.stream().filter(p -> !paths.contains(p)).toList();
+		pet.photos.removeIf(ph -> removed.contains(ph.storagePath));
+		for (String path : added) {
+			PetPhoto photo = new PetPhoto();
+			photo.pet = pet;
+			photo.storagePath = path;
+			pet.photos.add(photo);
+		}
+		for (PetPhoto ph : pet.photos) ph.position = (short) paths.indexOf(ph.storagePath);
+		pet.photos.sort(java.util.Comparator.comparingInt(ph -> ph.position));
+		// Always bumped: concurrent gallery edits conflict instead of mixing positions
+		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+		if (!added.isEmpty() || !removed.isEmpty()) resubmit(pet);
+		pets.saveAndFlush(pet);
+		storage.deleteAfterCommit(removed);
 		return toDto(pet, true, null);
 	}
 
@@ -204,7 +248,7 @@ public class PetService {
 		Profile o = p.owner;
 		String name = o.isVerifiedFoundation() || (o.accountType == AccountType.foundation && o.foundationName != null) ? o.foundationName : o.fullName;
 		var publisher = new PublisherDto(o.id, name, o.avatarUrl, o.municipalityId, o.accountType == AccountType.foundation, o.isVerifiedFoundation(), publisherCount);
-		var photos = p.photos.stream().map(ph -> new PhotoDto(ph.id, storage.publicUrl(ph.storagePath))).toList();
+		var photos = p.photos.stream().map(ph -> new PhotoDto(ph.id, storage.publicUrl(ph.storagePath), ph.storagePath)).toList();
 		return new PetDto(p.id, p.species, p.name, p.ageMonths, p.sex, p.size, p.municipalityId, p.vaccinated, p.sterilized, p.dewormed,
 				p.description, p.status, p.source, p.version, photos, publisher, privileged ? p.moderationReason : null, privileged ? p.riskScore : null,
 				p.createdAt, p.updatedAt);

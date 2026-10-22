@@ -36,3 +36,4 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [ ] Repo en GitHub + deploy en Render (Cris)
 - [ ] Colección corrida contra la URL pública
 - [x] Revisión de seguridad: 10 de 11 hallazgos corregidos (V3: `version` + permisos por columna; `/internal` con el mismo matcher que MVC; admin solo aprueba `pending_review`)
+- [x] D-28: alta como borrador, `PUT /api/pets/{id}/photos` (galería entera, una moderación), `DELETE /api/pets/{id}` solo para borradores; 20/20 tests y humo local contra Supabase

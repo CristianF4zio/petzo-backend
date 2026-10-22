@@ -70,6 +70,7 @@ class ApiTest {
 	String publish(UUID owner) throws Exception {
 		String id = call(withJson(post("/api/pets"), PET).with(as(owner)), 201).get("id").asText();
 		call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
+		call(withJson(patch("/api/pets/" + id + "/status"), "{\"status\":\"pending_review\"}").with(as(owner)), 200);
 		return id;
 	}
 
@@ -151,10 +152,48 @@ class ApiTest {
 		JsonNode pet = call(get("/api/pets/" + id).with(as(owner)), 200);
 		call(delete("/api/pets/" + id + "/photos/" + pet.get("photos").get(0).get("id").asText()).with(as(owner)), 409); // last photo
 		for (int i = 0; i < 4; i++) call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
-		mvc.perform(post("/api/pets/" + id + "/photos/upload-url").with(as(owner))).andExpect(jsonPath("$.code").value("TOO_MANY_PHOTOS"));
+		mvc.perform(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)))
+				.andExpect(jsonPath("$.code").value("TOO_MANY_PHOTOS"));
+		call(post("/api/pets/" + id + "/photos/upload-url").with(as(owner)), 200); // a full gallery can still upload a replacement
 		pet = call(get("/api/pets/" + id).with(as(owner)), 200);
 		mvc.perform(delete("/api/pets/" + id + "/photos/" + pet.get("photos").get(0).get("id").asText()).with(as(owner))).andExpect(jsonPath("$.photos.length()").value(4));
 		verify(storage).deleteAfterCommit(anyList());
+		mvc.perform(delete("/api/pets/" + id).with(as(owner))).andExpect(jsonPath("$.code").value("INVALID_STATUS")); // only drafts
+	}
+
+	@Test
+	void replaceGalleryInOneStep() throws Exception {
+		UUID owner = user("Owner", true);
+		String id = publish(owner);
+		for (int i = 0; i < 4; i++) call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
+		approve(id);
+		var paths = new java.util.ArrayList<String>();
+		call(get("/api/pets/" + id).with(as(owner)), 200).get("photos").forEach(p -> paths.add(p.get("path").asText()));
+		String fresh = "pets/" + id + "/" + UUID.randomUUID() + ".jpg";
+		String body = "{\"paths\":[\"" + fresh + "\",\"" + String.join("\",\"", paths.subList(1, 5)) + "\"]}"; // swap one out of a full gallery
+		call(withJson(put("/api/pets/" + id + "/photos"), body).with(as(user("Other", true))), 404);
+		call(withJson(put("/api/pets/" + id + "/photos"), "{\"paths\":[\"pets/other/x.jpg\"]}").with(as(owner)), 422);
+		call(withJson(put("/api/pets/" + id + "/photos"), "{\"paths\":[\"" + fresh + "\",\"" + fresh + "\"]}").with(as(owner)), 422);
+		call(withJson(put("/api/pets/" + id + "/photos"), "{\"paths\":[]}").with(as(owner)), 422);
+		clearInvocations(storage);
+		mvc.perform(withJson(put("/api/pets/" + id + "/photos"), body).with(as(owner)))
+				.andExpect(jsonPath("$.photos.length()").value(5)).andExpect(jsonPath("$.photos[0].path").value(fresh))
+				.andExpect(jsonPath("$.status").value("pending_review")); // content changed → moderated again
+		verify(storage).deleteAfterCommit(java.util.List.of(paths.get(0)));
+		// order only: still one call, no new photos needed
+		String reversed = "{\"paths\":[\"" + paths.get(4) + "\",\"" + paths.get(3) + "\",\"" + paths.get(2) + "\",\"" + paths.get(1) + "\",\"" + fresh + "\"]}";
+		mvc.perform(withJson(put("/api/pets/" + id + "/photos"), reversed).with(as(owner))).andExpect(jsonPath("$.photos[0].path").value(paths.get(4)));
+	}
+
+	@Test
+	void newPetIsDraftUntilSubmitted() throws Exception {
+		UUID owner = user("Owner", true);
+		String id = call(withJson(post("/api/pets"), PET).with(as(owner)), 201).get("id").asText();
+		mvc.perform(get("/api/pets/" + id).with(as(owner))).andExpect(jsonPath("$.status").value("draft"));
+		mvc.perform(withJson(patch("/api/pets/" + id + "/status"), "{\"status\":\"pending_review\"}").with(as(owner)))
+				.andExpect(jsonPath("$.code").value("PHOTOS_REQUIRED"));
+		call(delete("/api/pets/" + id).with(as(owner)), 204); // abandoned upload: the draft can go
+		call(get("/api/pets/" + id).with(as(owner)), 404);
 	}
 
 	@Test

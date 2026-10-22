@@ -50,6 +50,7 @@ class InternalTest {
 	String pendingPet(UUID owner) throws Exception {
 		String id = json.readTree(mvc.perform(withJson(post("/api/pets"), ApiTest.PET).with(as(owner))).andReturn().getResponse().getContentAsString()).get("id").asText();
 		mvc.perform(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)));
+		mvc.perform(withJson(patch("/api/pets/" + id + "/status"), "{\"status\":\"pending_review\"}").with(as(owner)));
 		return id;
 	}
 
@@ -109,7 +110,11 @@ class InternalTest {
 		mvc.perform(withJson(post("/internal/imports/" + job + "/status"), "{\"status\":\"done\",\"inputTokens\":50000,\"outputTokens\":2000}").header("x-internal-secret", SECRET))
 				.andExpect(status().isNoContent());
 		mvc.perform(get("/api/admin/imports").with(as(admin))).andExpect(jsonPath("$[?(@.id=='" + job + "')].petsCreated").value(1));
-		mvc.perform(get("/api/me/pets").with(as(admin))).andExpect(jsonPath("$[0].status").value("draft")).andExpect(jsonPath("$[0].source").value("instagram"));
+		String draft = json.readTree(mvc.perform(get("/api/me/pets").with(as(admin))).andExpect(jsonPath("$[0].status").value("draft"))
+				.andExpect(jsonPath("$[0].source").value("instagram")).andReturn().getResponse().getContentAsString()).get(0).get("id").asText();
 		verify(storage, never()).upload(anyString(), any(), anyString()); // non-Instagram URL rejected (SSRF guard)
+		mvc.perform(delete("/api/pets/" + draft).with(as(plain))).andExpect(status().isNotFound());
+		mvc.perform(delete("/api/pets/" + draft).with(as(admin))).andExpect(status().isNoContent());
+		mvc.perform(get("/api/pets/" + draft).with(as(admin))).andExpect(status().isNotFound());
 	}
 }

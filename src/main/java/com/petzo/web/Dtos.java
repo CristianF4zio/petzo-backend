@@ -27,7 +27,8 @@ public final class Dtos {
 
 	public record PublisherDto(UUID id, String name, String avatarUrl, Short municipalityId, boolean foundation, boolean verified, Long petsCount) {}
 
-	public record PhotoDto(UUID id, String url) {}
+	/** path is what PUT /pets/{id}/photos takes to keep this photo. */
+	public record PhotoDto(UUID id, String url, String path) {}
 
 	/** moderationReason/riskScore are filled only for the owner or an admin. */
 	public record PetDto(UUID id, Species species, String name, Short ageMonths, Sex sex, Types.Size size, Short municipalityId,
@@ -41,6 +42,8 @@ public final class Dtos {
 	public record StatusInput(@NotNull PetStatus status) {}
 
 	public record PhotoInput(@NotBlank String path) {}
+
+	public record PhotosInput(@NotNull @Size(min = 1, max = 5, message = "Entre 1 y 5 fotos") List<@NotBlank String> paths) {}
 
 	public record UploadUrl(String path, String signedUrl, String token) {}
 

@@ -49,6 +49,17 @@ Content-Type: application/json
 
 {"path": "pets/{{petId}}/REPLACE.jpg"}
 
+### Reorder photos (first = cover); must list every photo id of the pet
+PUT {{api}}/api/pets/{{petId}}/photos/order
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"photoIds": ["REPLACE-PHOTO-ID-1", "REPLACE-PHOTO-ID-2"]}
+
+### Delete a draft (imported from Instagram); 409 for any other status
+DELETE {{api}}/api/pets/{{petId}}
+Authorization: Bearer {{token}}
+
 ### Pause / republish / adopted
 PATCH {{api}}/api/pets/{{petId}}/status
 Authorization: Bearer {{token}}
