@@ -40,6 +40,18 @@ public final class Simple {
 		@Generated(event = EventType.INSERT) @Column(insertable = false, updatable = false) public Instant createdAt;
 	}
 
+	@Entity @Table(name = "import_jobs")
+	public static class ImportJob {
+		@Id @GeneratedValue(strategy = GenerationType.UUID) public UUID id;
+		public String instagramHandle;
+		public UUID requestedBy;
+		@Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.NAMED_ENUM) @Column(columnDefinition = "import_status")
+		public Types.ImportStatus status = Types.ImportStatus.queued;
+		public int petsCreated;
+		public String error;
+		@Generated(event = EventType.INSERT) @Column(insertable = false, updatable = false) public Instant createdAt;
+	}
+
 	@Entity @Table(name = "reports")
 	public static class Report {
 		@Id @GeneratedValue(strategy = GenerationType.UUID) public UUID id;

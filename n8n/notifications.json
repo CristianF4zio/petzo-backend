@@ -1,0 +1,39 @@
+{
+  "name": "Petzo 2 - Notificaciones",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "petzo-notify",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "petzo-notify",
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Petzo internal secret" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Petzo <REPLACE-WITH-SENDER@tu-dominio.com>",
+        "toEmail": "={{ $json.body.to }}",
+        "subject": "={{ $json.body.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.body.text }}\n\n— Petzo, adopción responsable en Gran Caracas",
+        "options": {}
+      },
+      "name": "Send email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [240, 0],
+      "credentials": { "smtp": { "id": "", "name": "Petzo SMTP" } }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send email", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

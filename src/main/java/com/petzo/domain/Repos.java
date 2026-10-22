@@ -42,6 +42,10 @@ public final class Repos {
 		List<Favorite> findByUserIdOrderByCreatedAtDesc(UUID userId);
 	}
 
+	public interface ImportJobRepo extends JpaRepository<Simple.ImportJob, UUID> {
+		List<Simple.ImportJob> findTop50ByOrderByCreatedAtDesc();
+	}
+
 	public interface LifestyleRepo extends JpaRepository<Simple.LifestyleProfile, UUID> {}
 
 	public interface RequestRepo extends JpaRepository<AdoptionRequest, UUID> {

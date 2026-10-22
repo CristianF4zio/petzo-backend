@@ -1,0 +1,71 @@
+{
+  "name": "Petzo 1 - Moderación",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "petzo-moderation",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "petzo-moderation",
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Petzo internal secret" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "anthropic-version", "value": "2023-06-01" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 2000, output_config: { effort: 'low' }, system: 'Moderas publicaciones de adopción de perros y gatos en Caracas para detectar fraude. Señales de riesgo: foto genérica o de banco de imágenes, animal que no coincide con la descripción, venta encubierta (precio, pago, raza de lujo), datos incoherentes. Responde SOLO un objeto JSON: {\"risk\": <entero 0-100>, \"reason\": \"<una frase en español>\"}.', messages: [{ role: 'user', content: [ ...$json.body.photos.map(u => ({ type: 'image', source: { type: 'url', url: u } })), { type: 'text', text: 'Nombre: ' + $json.body.name + '\\nEspecie: ' + $json.body.species + '\\nDescripción: ' + $json.body.description } ] }] }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "name": "Claude Haiku 5.5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Anthropic API key" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json;\nconst text = (msg.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim().replace(/^```(?:json)?\\s*|\\s*```$/g, '');\n// Anything unparseable stays in the admin queue (risk 100)\nlet r = { risk: 100, reason: 'No se pudo evaluar automáticamente' };\ntry {\n  const j = JSON.parse(text);\n  if (Number.isInteger(j.risk) && j.risk >= 0 && j.risk <= 100) r = { risk: j.risk, reason: String(j.reason || '').slice(0, 500) };\n} catch (e) {}\nconst src = $('Webhook').first().json.body;\nreturn [{ json: { petId: src.petId, riskScore: r.risk, reason: r.reason, updatedAt: src.updatedAt, inputTokens: msg.usage?.input_tokens ?? 0, outputTokens: msg.usage?.output_tokens ?? 0 } }];"
+      },
+      "name": "Parse result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://REPLACE-WITH-PETZO-API/internal/pets/{{ $json.petId }}/moderation-result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ riskScore: $json.riskScore, reason: $json.reason, updatedAt: $json.updatedAt, inputTokens: $json.inputTokens, outputTokens: $json.outputTokens }) }}",
+        "options": {}
+      },
+      "name": "Petzo callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Petzo internal secret" } }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Claude Haiku 5.5", "type": "main", "index": 0 }]] },
+    "Claude Haiku 5.5": { "main": [[{ "node": "Parse result", "type": "main", "index": 0 }]] },
+    "Parse result": { "main": [[{ "node": "Petzo callback", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

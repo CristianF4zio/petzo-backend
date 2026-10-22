@@ -45,6 +45,12 @@ public class StorageClient {
 		return new SignedUpload(path, url, token);
 	}
 
+	/** Server-side upload (Instagram imports); app uploads go through signed URLs. */
+	public void upload(String path, byte[] bytes, String contentType) {
+		http.post().uri("/object/" + BUCKET + "/" + path).contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+				.body(bytes).retrieve().toBodilessEntity();
+	}
+
 	public boolean exists(String path) {
 		try {
 			http.head().uri("/object/public/" + BUCKET + "/" + path).retrieve().toBodilessEntity();

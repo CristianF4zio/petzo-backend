@@ -30,7 +30,7 @@ public final class Dtos {
 	public record PhotoDto(UUID id, String url) {}
 
 	/** moderationReason/riskScore are filled only for the owner or an admin. */
-	public record PetDto(UUID id, Species species, String name, short ageMonths, Sex sex, Types.Size size, Short municipalityId,
+	public record PetDto(UUID id, Species species, String name, Short ageMonths, Sex sex, Types.Size size, Short municipalityId,
 			boolean vaccinated, boolean sterilized, boolean dewormed, String description, PetStatus status, PetSource source,
 			List<PhotoDto> photos, PublisherDto publisher, String moderationReason, Short riskScore, Instant createdAt, Instant updatedAt) {}
 
@@ -68,6 +68,18 @@ public final class Dtos {
 	public record MatchDto(PetDto pet, int score, String reason) {}
 
 	public record MatchResult(List<MatchDto> matches, boolean aiAvailable) {}
+
+	// Internal (n8n + Stagehand worker, B3)
+	public record ModerationResult(@Min(0) @Max(100) int riskScore, @Size(max = 500) String reason, String updatedAt, long inputTokens, long outputTokens) {}
+
+	public record ImportedPet(@Size(max = 60) String name, Species species, Sex sex, Types.Size size, @Min(0) @Max(360) Short ageMonths,
+			@Size(max = 2000) String description, @NotNull List<String> photoUrls, @Size(max = 500) String sourceUrl) {}
+
+	public record ImportedPets(@NotNull @Size(max = 10) List<@jakarta.validation.Valid ImportedPet> pets) {}
+
+	public record ImportStatusInput(@NotNull ImportStatus status, @Size(max = 500) String error, long inputTokens, long outputTokens) {}
+
+	public record ImportInput(@NotBlank @Pattern(regexp = "@?[A-Za-z0-9._]{1,30}") String instagramHandle) {}
 
 	// Admin
 	public record RejectInput(@NotBlank @Size(max = 500) String reason) {}

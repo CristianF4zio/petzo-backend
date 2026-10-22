@@ -15,8 +15,24 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
 	private final AdminService admin;
+	private final com.petzo.service.InternalService imports;
+	private final com.petzo.service.CurrentUser current;
 
-	public AdminController(AdminService admin) { this.admin = admin; }
+	public AdminController(AdminService admin, com.petzo.service.InternalService imports, com.petzo.service.CurrentUser current) {
+		this.admin = admin;
+		this.imports = imports;
+		this.current = current;
+	}
+
+	@PostMapping("/imports")
+	@ResponseStatus(HttpStatus.CREATED)
+	com.petzo.domain.Simple.ImportJob createImport(@org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.oauth2.jwt.Jwt jwt,
+			@Valid @RequestBody ImportInput in) {
+		return imports.createImport(current.require(jwt), in.instagramHandle());
+	}
+
+	@GetMapping("/imports")
+	List<com.petzo.domain.Simple.ImportJob> imports() { return imports.imports(); }
 
 	@GetMapping("/moderation")
 	List<PetDto> moderation() { return admin.moderationQueue(); }
