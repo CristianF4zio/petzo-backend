@@ -48,6 +48,27 @@ public final class Dtos {
 
 	public record Page<T>(List<T> items, int page, int pageSize, long total) {}
 
+	// Requests + match (B2)
+	public record RequestInput(@NotNull java.util.Map<String, Object> answers, @NotBlank @Size(min = 20, max = 500) String motivation) {}
+
+	public record AdopterDto(UUID id, String name, String avatarUrl, Short municipalityId) {}
+
+	public record RequestDto(UUID id, UUID petId, RequestStatus status, AdopterDto adopter, java.util.Map<String, Object> answers, String motivation,
+			String aiSummary, Short aiScore, Instant createdAt, Instant decidedAt) {}
+
+	public record MyRequestDto(UUID id, RequestStatus status, UUID petId, String petName, String petPhoto, Instant createdAt, Instant decidedAt) {}
+
+	public record ContactDto(String name, String whatsapp) {}
+
+	public record Lifestyle(@NotBlank @Pattern(regexp = "casa|apartamento|otro") String housing, @NotBlank @Pattern(regexp = "poco|medio|mucho") String timeAtHome,
+			boolean kids, boolean otherPets, @NotBlank @Pattern(regexp = "ninguna|algo|mucha") String experience) {}
+
+	public record MatchInput(Species species, Types.Size size, Short municipalityId) {}
+
+	public record MatchDto(PetDto pet, int score, String reason) {}
+
+	public record MatchResult(List<MatchDto> matches, boolean aiAvailable) {}
+
 	// Admin
 	public record RejectInput(@NotBlank @Size(max = 500) String reason) {}
 

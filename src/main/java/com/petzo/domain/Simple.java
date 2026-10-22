@@ -33,6 +33,13 @@ public final class Simple {
 		@Generated(event = EventType.INSERT) @Column(insertable = false, updatable = false) public Instant createdAt;
 	}
 
+	@Entity @Table(name = "lifestyle_profiles")
+	public static class LifestyleProfile {
+		@Id public UUID userId;
+		@org.hibernate.annotations.JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb") public java.util.Map<String, Object> answers;
+		@Generated(event = EventType.INSERT) @Column(insertable = false, updatable = false) public Instant createdAt;
+	}
+
 	@Entity @Table(name = "reports")
 	public static class Report {
 		@Id @GeneratedValue(strategy = GenerationType.UUID) public UUID id;

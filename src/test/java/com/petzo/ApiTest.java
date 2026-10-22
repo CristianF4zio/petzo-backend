@@ -53,7 +53,7 @@ class ApiTest {
 		return id;
 	}
 
-	static RequestPostProcessor as(UUID id) {
+	public static RequestPostProcessor as(UUID id) {
 		return jwt().jwt(j -> j.subject(id.toString()).claim("role", "authenticated"));
 	}
 
@@ -62,7 +62,7 @@ class ApiTest {
 		return body.isEmpty() ? null : json.readTree(body);
 	}
 
-	static MockHttpServletRequestBuilder withJson(MockHttpServletRequestBuilder req, String body) {
+	public static MockHttpServletRequestBuilder withJson(MockHttpServletRequestBuilder req, String body) {
 		return req.contentType(MediaType.APPLICATION_JSON).content(body);
 	}
 

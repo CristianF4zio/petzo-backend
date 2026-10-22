@@ -18,4 +18,12 @@ public class Events {
 	public void petStatusChanged(Pet pet) {
 		log.info("pet {} is now {}", pet.id, pet.status);
 	}
+
+	public void requestCreated(com.petzo.domain.AdoptionRequest r) {
+		log.info("request {} created for pet {}", r.id, r.pet.id);
+	}
+
+	public void requestStatusChanged(com.petzo.domain.AdoptionRequest r) {
+		log.info("request {} is now {}", r.id, r.status);
+	}
 }

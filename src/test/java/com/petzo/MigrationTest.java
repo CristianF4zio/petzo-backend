@@ -22,6 +22,18 @@ class MigrationTest {
 		assertThat(jdbc.queryForObject("select count(*) from pg_policies where schemaname = 'public' and cmd <> 'SELECT'", Integer.class)).isZero();
 	}
 
+	@Autowired com.petzo.ai.AiService ai;
+	@Autowired com.fasterxml.jackson.databind.ObjectMapper json;
+
+	@Test
+	void aiLogsCountTowardTheDailyCap() {
+		long before = ai.tokensToday();
+		ai.record("pre_evaluation", "adoption_request", UUID.randomUUID(), 1200, 150, json.createObjectNode().put("score", 80));
+		ai.record("import", "import_job", UUID.randomUUID(), 100, 50, json.createObjectNode());
+		assertThat(ai.tokensToday()).isEqualTo(before + 1500);
+		assertThat(ai.available()).isFalse(); // no API key in tests → AI off, callers fall back to manual
+	}
+
 	@Test
 	void signUpCreatesProfileWithSanitizedMetadata() {
 		UUID id = UUID.randomUUID();

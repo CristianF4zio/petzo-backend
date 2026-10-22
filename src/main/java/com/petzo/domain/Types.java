@@ -19,6 +19,5 @@ public final class Types {
 	public enum PetSource { app, instagram }
 	public enum RequestStatus { pending, approved, rejected, withdrawn }
 	public enum ReportStatus { open, resolved }
-	public enum AiTask { moderation, pre_evaluation, match, import_ }
 	public enum ImportStatus { queued, running, done, failed }
 }
