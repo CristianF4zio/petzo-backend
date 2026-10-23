@@ -66,10 +66,17 @@ class ApiTest {
 		return req.contentType(MediaType.APPLICATION_JSON).content(body);
 	}
 
-	/** Creates a pet with one photo (pending_review). */
+	/** PUT /photos body with n freshly "uploaded" paths of that pet. */
+	public static String gallery(String petId, int n) {
+		var paths = new java.util.ArrayList<String>();
+		for (int i = 0; i < n; i++) paths.add("\"pets/" + petId + "/" + UUID.randomUUID() + ".jpg\"");
+		return "{\"paths\":[" + String.join(",", paths) + "]}";
+	}
+
+	/** Creates a pet with one photo (pending_review), the way the app does it (D-28). */
 	String publish(UUID owner) throws Exception {
 		String id = call(withJson(post("/api/pets"), PET).with(as(owner)), 201).get("id").asText();
-		call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
+		call(withJson(put("/api/pets/" + id + "/photos"), gallery(id, 1)).with(as(owner)), 200);
 		call(withJson(patch("/api/pets/" + id + "/status"), "{\"status\":\"pending_review\"}").with(as(owner)), 200);
 		return id;
 	}
@@ -104,7 +111,7 @@ class ApiTest {
 		UUID owner = user("Owner", true), other = user("Other", true);
 		call(withJson(post("/api/pets"), PET.replace("dog", "cow")).with(as(owner)), 422);
 		String id = publish(owner);
-		call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/other/x.jpg\"}").with(as(owner)), 422);
+		call(withJson(put("/api/pets/" + id + "/photos"), "{\"paths\":[\"pets/other/x.jpg\"]}").with(as(owner)), 422);
 		call(post("/api/pets/" + id + "/photos/upload-url").with(as(other)), 404);
 
 		call(get("/api/pets/" + id).with(as(other)), 404); // pending is private
@@ -149,15 +156,10 @@ class ApiTest {
 	void photosLimitsAndDeletion() throws Exception {
 		UUID owner = user("Owner", true);
 		String id = publish(owner);
-		JsonNode pet = call(get("/api/pets/" + id).with(as(owner)), 200);
-		call(delete("/api/pets/" + id + "/photos/" + pet.get("photos").get(0).get("id").asText()).with(as(owner)), 409); // last photo
-		for (int i = 0; i < 4; i++) call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
-		mvc.perform(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)))
-				.andExpect(jsonPath("$.code").value("TOO_MANY_PHOTOS"));
+		call(withJson(put("/api/pets/" + id + "/photos"), gallery(id, 6)).with(as(owner)), 422); // max 5
+		call(withJson(put("/api/pets/" + id + "/photos"), gallery(id, 5)).with(as(owner)), 200);
 		call(post("/api/pets/" + id + "/photos/upload-url").with(as(owner)), 200); // a full gallery can still upload a replacement
-		pet = call(get("/api/pets/" + id).with(as(owner)), 200);
-		mvc.perform(delete("/api/pets/" + id + "/photos/" + pet.get("photos").get(0).get("id").asText()).with(as(owner))).andExpect(jsonPath("$.photos.length()").value(4));
-		verify(storage).deleteAfterCommit(anyList());
+		verify(storage).deleteAfterCommit(argThat(l -> l.size() == 1)); // the replaced photo leaves Storage
 		mvc.perform(delete("/api/pets/" + id).with(as(owner))).andExpect(jsonPath("$.code").value("INVALID_STATUS")); // only drafts
 	}
 
@@ -165,7 +167,7 @@ class ApiTest {
 	void replaceGalleryInOneStep() throws Exception {
 		UUID owner = user("Owner", true);
 		String id = publish(owner);
-		for (int i = 0; i < 4; i++) call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
+		call(withJson(put("/api/pets/" + id + "/photos"), gallery(id, 5)).with(as(owner)), 200);
 		approve(id);
 		var paths = new java.util.ArrayList<String>();
 		call(get("/api/pets/" + id).with(as(owner)), 200).get("photos").forEach(p -> paths.add(p.get("path").asText()));

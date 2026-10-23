@@ -55,7 +55,7 @@ class RequestTest {
 
 	String approvedPet(UUID owner) throws Exception {
 		String id = call(withJson(post("/api/pets"), ApiTest.PET).with(as(owner)), 201).get("id").asText();
-		call(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)), 201);
+		call(withJson(put("/api/pets/" + id + "/photos"), ApiTest.gallery(id, 1)).with(as(owner)), 200);
 		jdbc.update("update pets set status = 'approved' where id = ?::uuid", id);
 		return id;
 	}
@@ -104,6 +104,32 @@ class RequestTest {
 		mvc.perform(get("/api/me/requests").with(as(other))).andExpect(jsonPath("$[0].id").value(otherReq)).andExpect(jsonPath("$[0].status").value("pending"));
 		// RNF-04: the public detail never carries WhatsApp
 		mvc.perform(get("/api/pets/" + pet)).andExpect(jsonPath("$..whatsapp").isEmpty());
+	}
+
+	@Test
+	void slowPreEvaluationKeepsTheOwnersDecision() throws Exception {
+		var approved = new java.util.concurrent.CountDownLatch(1);
+		// the AI "thinks" until the owner has approved, like a slow real call
+		when(ai.askJson(eq("pre_evaluation"), any(), any(), any(), any())).thenAnswer(i -> {
+			approved.await(5, java.util.concurrent.TimeUnit.SECONDS);
+			return Optional.of(json.readTree("{\"summary\":\"Buen hogar.\",\"score\":80}"));
+		});
+		UUID owner = user("Owner", true, "+584121111111"), adopter = user("Adopter", true, "+584142222222");
+		String pet = approvedPet(owner);
+		String req = call(withJson(post("/api/pets/" + pet + "/requests"), REQUEST).with(as(adopter)), 201).get("id").asText();
+		call(post("/api/requests/" + req + "/approve").with(as(owner)), 200);
+		approved.countDown();
+		for (int i = 0; i < 50 && jdbc.queryForObject("select ai_score from adoption_requests where id = ?::uuid", Short.class, req) == null; i++) Thread.sleep(100);
+		var row = jdbc.queryForMap("select status::text as status, ai_score from adoption_requests where id = ?::uuid", req);
+		assertThat(row).containsEntry("status", "approved").containsEntry("ai_score", 80);
+	}
+
+	@Test
+	void hugeAnswersAreRejected() throws Exception {
+		UUID owner = user("Owner", true, "+584121111111"), adopter = user("Adopter", true, "+584142222222");
+		String pet = approvedPet(owner);
+		String huge = "{\"answers\":{\"x\":\"" + "a".repeat(3000) + "\"},\"motivation\":\"Tengo patio grande y tiempo para pasearlo cada día.\"}";
+		mvc.perform(withJson(post("/api/pets/" + pet + "/requests"), huge).with(as(adopter))).andExpect(status().isUnprocessableEntity());
 	}
 
 	@Test

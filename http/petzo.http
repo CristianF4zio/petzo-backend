@@ -31,32 +31,32 @@ Content-Type: application/json
 
 {"foundationName": "Refugio Patas del Ávila", "foundationInstagram": "@patasdelavila", "foundationBio": "Rescatamos perros en Libertador"}
 
-### Create pet (pending_review, respects plan limit)
+### Create pet (draft, respects plan limit; D-28)
 POST {{api}}/api/pets
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {"species": "dog", "name": "Toby", "ageMonths": 14, "sex": "male", "size": "medium", "municipalityId": 2, "vaccinated": true, "sterilized": true, "dewormed": false, "description": "Tranquilo en casa y feliz en la calle."}
 
-### Photo upload URL → PUT the JPEG to signedUrl, then register the path
+### Photo upload URL → PUT the JPEG to signedUrl (one per new photo)
 POST {{api}}/api/pets/{{petId}}/photos/upload-url
 Authorization: Bearer {{token}}
 
-### Register uploaded photo (triggers moderation)
-POST {{api}}/api/pets/{{petId}}/photos
+### Save the whole gallery in order (first = cover; 1 to 5 paths; kept paths stay, missing ones are deleted)
+PUT {{api}}/api/pets/{{petId}}/photos
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"path": "pets/{{petId}}/REPLACE.jpg"}
+{"paths": ["pets/{{petId}}/REPLACE.jpg"]}
 
-### Reorder photos (first = cover); must list every photo id of the pet
-PUT {{api}}/api/pets/{{petId}}/photos/order
+### Submit the draft for moderation
+PATCH {{api}}/api/pets/{{petId}}/status
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"photoIds": ["REPLACE-PHOTO-ID-1", "REPLACE-PHOTO-ID-2"]}
+{"status": "pending_review"}
 
-### Delete a draft (imported from Instagram); 409 for any other status
+### Delete a draft (new or imported from Instagram); 409 for any other status
 DELETE {{api}}/api/pets/{{petId}}
 Authorization: Bearer {{token}}
 

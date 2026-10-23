@@ -41,8 +41,6 @@ public final class Dtos {
 
 	public record StatusInput(@NotNull PetStatus status) {}
 
-	public record PhotoInput(@NotBlank String path) {}
-
 	public record PhotosInput(@NotNull @Size(min = 1, max = 5, message = "Entre 1 y 5 fotos") List<@NotBlank String> paths) {}
 
 	public record UploadUrl(String path, String signedUrl, String token) {}
@@ -75,8 +73,9 @@ public final class Dtos {
 	// Internal (n8n + Stagehand worker, B3)
 	public record ModerationResult(@Min(0) @Max(100) int riskScore, @Size(max = 500) String reason, @NotNull Integer version, long inputTokens, long outputTokens) {}
 
-	public record ImportedPet(@Size(max = 60) String name, Species species, Sex sex, Types.Size size, @Min(0) @Max(360) Short ageMonths,
-			@Size(max = 2000) String description, @NotNull List<String> photoUrls, @Size(max = 500) String sourceUrl) {}
+	/** Scraped text is trimmed to fit on save, never rejected: one long post must not fail the whole batch. */
+	public record ImportedPet(String name, Species species, Sex sex, Types.Size size, Short ageMonths, String description, @NotNull List<String> photoUrls,
+			String sourceUrl) {}
 
 	public record ImportedPets(@NotNull @Size(max = 10) List<@jakarta.validation.Valid ImportedPet> pets) {}
 

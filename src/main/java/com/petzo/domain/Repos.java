@@ -34,8 +34,6 @@ public final class Repos {
 
 		long countByOwnerIdAndStatus(UUID ownerId, PetStatus status);
 
-		long countByStatus(PetStatus status);
-
 		@Query("select p from Pet p where p.id in :ids and p.status = 'approved' and p.owner.suspended = false")
 		List<Pet> findVisible(Collection<UUID> ids);
 	}
@@ -56,9 +54,6 @@ public final class Repos {
 		List<AdoptionRequest> findByAdopterIdOrderByCreatedAtDesc(UUID adopterId);
 
 		boolean existsByPetIdAndAdopterIdAndStatus(UUID petId, UUID adopterId, Types.RequestStatus status);
-
-		@Query("select count(r) > 0 from AdoptionRequest r where r.status = 'approved' and ((r.adopter.id = :a and r.pet.owner.id = :b) or (r.adopter.id = :b and r.pet.owner.id = :a))")
-		boolean approvedBetween(UUID a, UUID b);
 	}
 
 	public interface ReportRepo extends JpaRepository<Report, UUID> {

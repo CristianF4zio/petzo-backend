@@ -47,7 +47,10 @@ public class AiService {
 		return used == null ? 0 : used;
 	}
 
-	public boolean available() { return client != null && tokensToday() < props.aiDailyTokenCap(); }
+	public boolean available() { return client != null && underDailyCap(); }
+
+	/** RNF-05: shared by every AI caller, including n8n moderation (which uses its own Claude key). */
+	public boolean underDailyCap() { return tokensToday() < props.aiDailyTokenCap(); }
 
 	/** task is an ai_task label: moderation | pre_evaluation | match | import. */
 	public Optional<JsonNode> askJson(String task, String entityType, UUID entityId, String system, String user) {

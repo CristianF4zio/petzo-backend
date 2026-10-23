@@ -97,21 +97,10 @@ public class ApiController {
 	@PostMapping("/pets/{id}/photos/upload-url")
 	UploadUrl photoUploadUrl(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) { return pets.uploadUrl(current.require(jwt), id); }
 
-	@PostMapping("/pets/{id}/photos")
-	@ResponseStatus(HttpStatus.CREATED)
-	PetDto addPhoto(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PhotoInput in) {
-		return pets.addPhoto(current.require(jwt), id, in.path());
-	}
-
 	/** Whole gallery in order (first = cover); the app uses this instead of single add/delete. */
 	@PutMapping("/pets/{id}/photos")
 	PetDto replacePhotos(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PhotosInput in) {
 		return pets.replacePhotos(current.require(jwt), id, in.paths());
-	}
-
-	@DeleteMapping("/pets/{id}/photos/{photoId}")
-	PetDto deletePhoto(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @PathVariable UUID photoId) {
-		return pets.deletePhoto(current.require(jwt), id, photoId);
 	}
 
 	@PostMapping("/pets/{id}/reports")

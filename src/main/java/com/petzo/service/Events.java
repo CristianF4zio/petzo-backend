@@ -1,5 +1,6 @@
 package com.petzo.service;
 
+import com.petzo.ai.AiService;
 import com.petzo.config.PetzoProperties;
 import com.petzo.domain.AdoptionRequest;
 import com.petzo.domain.Pet;
@@ -31,15 +32,22 @@ public class Events {
 	private final PetzoProperties props;
 	private final StorageClient storage;
 	private final JdbcTemplate jdbc;
+	private final AiService ai;
 	private final RestClient http = RestClient.create();
 
-	public Events(PetzoProperties props, StorageClient storage, JdbcTemplate jdbc) {
+	public Events(PetzoProperties props, StorageClient storage, JdbcTemplate jdbc, AiService ai) {
 		this.props = props;
 		this.storage = storage;
 		this.jdbc = jdbc;
+		this.ai = ai;
 	}
 
 	public void moderate(Pet pet) {
+		// RNF-05/RNF-08: over the daily AI cap the pet just waits in the admin queue
+		if (!ai.underDailyCap()) {
+			log.info("AI daily cap reached; pet {} left for manual review", pet.id);
+			return;
+		}
 		afterCommit(() -> {
 			Map<String, Object> body = new LinkedHashMap<>();
 			body.put("petId", pet.id);
@@ -100,7 +108,7 @@ public class Events {
 
 	private Runnable send(String url, Object body) {
 		if (url == null || url.isBlank()) {
-			log.info("n8n webhook not configured; skipped {}", body);
+			log.info("n8n webhook not configured; event skipped"); // body holds emails: never log it
 			return null;
 		}
 		return () -> {

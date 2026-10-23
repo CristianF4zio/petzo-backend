@@ -10,3 +10,4 @@
 | F1 | artifact-design (vía quickstart del Artifact) | Guía publicada del modelo de datos: decisiones, pruebas y criterio de "lista" | https://claude.ai/artifact/HRdiphme71C66X52KqqYym |
 | F1 | ponytail (nivel full, toda la sesión) | Cambio mínimo y completo en los endpoints nuevos y en la migración del contrato | Un solo `PUT /photos` en vez de reordenar + borrar por separado; se reusó `editable()`, `resubmit()` y `deleteAfterCommit()` sin capas nuevas |
 | F1 | ponytail:ponytail-audit | Auditoría completa del backend (solo lectura) | 14 hallazgos; el más grave: editar sin cambiar fotos deja la mascota en revisión para siempre (versión subida sin moderar) |
+| F1 | ponytail (full) + test de mutación | Arreglar los hallazgos 1, 2, 5–10, 19 y 20 de la auditoría | Cada arreglo es el cambio mínimo; el test del hallazgo 1 falla si se quita el arreglo (verificado) |

@@ -38,6 +38,8 @@ public class RequestService {
 
 	public RequestDto create(Profile me, UUID petId, RequestInput in) {
 		CurrentUser.requireComplete(me);
+		// answers go verbatim into the AI prompt: a huge map could burn the whole daily token cap
+		if (in.answers().toString().length() > 2000) throw new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "Respuestas demasiado largas");
 		Pet pet = pets.findVisible(List.of(petId)).stream().findFirst().orElseThrow(ApiException::notFound);
 		if (pet.owner.id.equals(me.id)) throw ApiException.conflict("OWN_PET", "No puedes adoptar tu propia publicación");
 		if (requests.existsByPetIdAndAdopterIdAndStatus(petId, me.id, RequestStatus.pending)) {

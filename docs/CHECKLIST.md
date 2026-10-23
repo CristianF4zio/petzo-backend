@@ -39,3 +39,4 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [ ] Colección `.http` corrida contra la URL pública (depende del deploy)
 - [x] Revisión de seguridad: 10 de 11 hallazgos corregidos (V3: `version` + permisos por columna; `/internal` con el mismo matcher que MVC; admin solo aprueba `pending_review`)
 - [x] D-28: alta como borrador, `PUT /api/pets/{id}/photos` (galería entera, una moderación), `DELETE /api/pets/{id}` solo para borradores; 20/20 tests y humo local contra Supabase
+- [x] Auditoría ponytail corregida: edición que quedaba en revisión para siempre, IA que deshacía aprobaciones, IA fuera de transacción, tope diario también para moderación, respuestas acotadas, imports que ya no fallan por textos largos, borrado de Storage sin 500, sin correos en logs, código sobrante fuera (24/24 tests)

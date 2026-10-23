@@ -110,15 +110,15 @@ public class InternalService {
 			Pet pet = new Pet();
 			pet.owner = owner;
 			pet.species = ip.species() == null ? Species.dog : ip.species();
-			pet.name = ip.name() == null || ip.name().isBlank() ? "Sin nombre" : ip.name().trim();
-			pet.ageMonths = ip.ageMonths();
+			pet.name = ip.name() == null || ip.name().isBlank() ? "Sin nombre" : cut(ip.name().trim(), 60);
+			pet.ageMonths = ip.ageMonths() == null ? null : (short) Math.clamp(ip.ageMonths(), 0, 360);
 			pet.sex = ip.sex() == null ? Sex.female : ip.sex();
 			pet.size = ip.size() == null ? Size.medium : ip.size();
 			pet.municipalityId = owner.municipalityId != null ? owner.municipalityId : 1;
-			pet.description = ip.description() == null ? null : ip.description().substring(0, Math.min(1000, ip.description().length()));
+			pet.description = ip.description() == null ? null : cut(ip.description(), 1000);
 			pet.status = PetStatus.draft;
 			pet.source = PetSource.instagram;
-			pet.sourceUrl = ip.sourceUrl();
+			pet.sourceUrl = ip.sourceUrl() == null ? null : cut(ip.sourceUrl(), 500);
 			Pet saved = pets.save(pet);
 			for (String url : ip.photoUrls().stream().limit(5).toList()) {
 				fetchImage(url).ifPresent(bytes -> {
@@ -148,6 +148,8 @@ public class InternalService {
 	}
 
 	// SSRF guard: only https images from Instagram's CDNs (no redirects elsewhere), read at most 5 MB
+	private static String cut(String s, int max) { return s.substring(0, Math.min(max, s.length())); }
+
 	private Optional<byte[]> fetchImage(String url) {
 		try {
 			URI uri = URI.create(url);

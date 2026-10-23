@@ -21,7 +21,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** RF-12/13: questionnaire + up to 10 compatible pets with % and reason. Not stored; logged in ai_logs. */
 @Service
@@ -38,13 +41,16 @@ public class MatchService {
 	private final AiService ai;
 	private final PetService petService;
 	private final ObjectMapper json;
+	private final TransactionTemplate read;
 
-	public MatchService(LifestyleRepo lifestyles, PetRepo pets, AiService ai, PetService petService, ObjectMapper json) {
+	public MatchService(LifestyleRepo lifestyles, PetRepo pets, AiService ai, PetService petService, ObjectMapper json, PlatformTransactionManager tx) {
 		this.lifestyles = lifestyles;
 		this.pets = pets;
 		this.ai = ai;
 		this.petService = petService;
 		this.json = json;
+		this.read = new TransactionTemplate(tx);
+		this.read.setReadOnly(true);
 	}
 
 	@Transactional(readOnly = true)
@@ -59,6 +65,8 @@ public class MatchService {
 		return lifestyles.save(l).answers;
 	}
 
+	// No transaction here: the AI call (up to ~90 s) must not hold one of the pool's DB connections
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public MatchResult match(Profile me, MatchInput in) {
 		Map<String, Object> answers = getLifestyle(me);
 		if (answers == null) throw ApiException.conflict("LIFESTYLE_REQUIRED", "Responde el cuestionario primero");
@@ -74,31 +82,32 @@ public class MatchService {
 			if (in.municipalityId() != null) p.add(cb.equal(root.get("municipalityId"), in.municipalityId()));
 			return cb.and(p.toArray(Predicate[]::new));
 		};
-		List<Pet> candidates = pets.findAll(spec, PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
-		if (candidates.isEmpty()) return new MatchResult(List.of(), true);
-
+		// Candidates become DTOs inside a short read-only transaction (lazy owner and photos load there)
+		Map<UUID, PetDto> byId = new LinkedHashMap<>();
 		StringBuilder list = new StringBuilder();
-		for (Pet p : candidates) {
-			String desc = p.description == null ? "" : p.description.substring(0, Math.min(200, p.description.length()));
-			list.append(p.id).append(" | ").append(p.species).append(", ").append(p.ageMonths).append(" meses, ").append(p.sex).append(", ")
-					.append(p.size).append(", vacunado=").append(p.vaccinated).append(", esterilizado=").append(p.sterilized).append(" | ").append(desc).append('\n');
-		}
+		read.executeWithoutResult(s -> {
+			for (Pet p : pets.findAll(spec, PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent()) {
+				byId.put(p.id, petService.toDto(p, false, null));
+				String desc = p.description == null ? "" : p.description.substring(0, Math.min(200, p.description.length()));
+				list.append(p.id).append(" | ").append(p.species).append(", ").append(p.ageMonths).append(" meses, ").append(p.sex).append(", ")
+						.append(p.size).append(", vacunado=").append(p.vaccinated).append(", esterilizado=").append(p.sterilized).append(" | ").append(desc).append('\n');
+			}
+		});
+		if (byId.isEmpty()) return new MatchResult(List.of(), true);
 		var result = ai.askJson("match", "profile", me.id, SYSTEM, "Estilo de vida: " + answers + "\nCandidatas:\n" + list);
 		if (result.isEmpty()) return new MatchResult(List.of(), false);
 
-		Map<UUID, Pet> byId = new LinkedHashMap<>();
-		candidates.forEach(p -> byId.put(p.id, p));
 		List<MatchDto> matches = new ArrayList<>();
 		JsonNode arr = result.get().get("matches");
 		if (arr != null && arr.isArray()) {
 			for (JsonNode m : arr) {
 				if (matches.size() == 10) break;
 				try {
-					Pet pet = byId.remove(UUID.fromString(m.path("petId").asText()));
+					PetDto pet = byId.remove(UUID.fromString(m.path("petId").asText()));
 					int score = m.path("score").asInt(-1);
 					if (pet == null || score < 0 || score > 100) continue; // ignore ids the model invented
 					String reason = m.path("reason").asText("");
-					matches.add(new MatchDto(petService.toDto(pet, false, null), score, reason.substring(0, Math.min(200, reason.length()))));
+					matches.add(new MatchDto(pet, score, reason.substring(0, Math.min(200, reason.length()))));
 				} catch (IllegalArgumentException ignored) {
 					// not a UUID
 				}

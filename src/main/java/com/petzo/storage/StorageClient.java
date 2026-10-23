@@ -3,6 +3,8 @@ package com.petzo.storage;
 import com.petzo.config.PetzoProperties;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -11,6 +13,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 /** Supabase Storage REST with the service_role key (backend only, SPEC §15). */
 @Component
 public class StorageClient {
+
+	private static final Logger log = LoggerFactory.getLogger(StorageClient.class);
 
 	public static final String BUCKET = "pet-photos";
 
@@ -68,7 +72,14 @@ public class StorageClient {
 			return;
 		}
 		org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
-			@Override public void afterCommit() { delete(paths); }
+			// The change is already saved: a Storage hiccup is logged, not thrown (it would also skip later afterCommit hooks like emails)
+			@Override public void afterCommit() {
+				try {
+					delete(paths);
+				} catch (Exception e) {
+					log.warn("Storage delete failed for {} paths: {}", paths.size(), e.getMessage());
+				}
+			}
 		});
 	}
 

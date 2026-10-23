@@ -7,7 +7,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.petzo.service.Events;
 import com.petzo.storage.StorageClient;
 import com.petzo.storage.StorageClient.SignedUpload;
 import java.util.UUID;
@@ -19,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @Import(TestcontainersConfiguration.class)
@@ -32,6 +35,7 @@ class InternalTest {
 	@Autowired JdbcTemplate jdbc;
 	@Autowired ObjectMapper json;
 	@MockitoBean StorageClient storage;
+	@MockitoSpyBean Events events;
 
 	@BeforeEach
 	void stubs() {
@@ -49,7 +53,7 @@ class InternalTest {
 
 	String pendingPet(UUID owner) throws Exception {
 		String id = json.readTree(mvc.perform(withJson(post("/api/pets"), ApiTest.PET).with(as(owner))).andReturn().getResponse().getContentAsString()).get("id").asText();
-		mvc.perform(withJson(post("/api/pets/" + id + "/photos"), "{\"path\":\"pets/" + id + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)));
+		mvc.perform(withJson(put("/api/pets/" + id + "/photos"), ApiTest.gallery(id, 1)).with(as(owner)));
 		mvc.perform(withJson(patch("/api/pets/" + id + "/status"), "{\"status\":\"pending_review\"}").with(as(owner)));
 		return id;
 	}
@@ -86,7 +90,7 @@ class InternalTest {
 		UUID owner = user(false), boss = user(true);
 		String pet = pendingPet(owner);
 		int before = version(pet);
-		mvc.perform(withJson(post("/api/pets/" + pet + "/photos"), "{\"path\":\"pets/" + pet + "/" + UUID.randomUUID() + ".jpg\"}").with(as(owner)));
+		mvc.perform(withJson(put("/api/pets/" + pet + "/photos"), ApiTest.gallery(pet, 2)).with(as(owner)));
 		org.assertj.core.api.Assertions.assertThat(version(pet)).isGreaterThan(before);
 		mvc.perform(withJson(post("/internal/pets/" + pet + "/moderation-result"), "{\"riskScore\":5,\"reason\":\"ok\",\"version\":" + before + ",\"inputTokens\":1,\"outputTokens\":1}")
 				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.status").value("ignored"));
@@ -94,6 +98,31 @@ class InternalTest {
 		mvc.perform(post("/api/admin/pets/" + pet + "/approve?version=" + before).with(as(boss))).andExpect(jsonPath("$.code").value("STALE"));
 		mvc.perform(post("/api/admin/pets/" + pet + "/approve?version=" + version(pet)).with(as(boss))).andExpect(jsonPath("$.status").value("approved"));
 		mvc.perform(post("/api/admin/pets/" + pet + "/approve").with(as(boss))).andExpect(jsonPath("$.code").value("INVALID_STATUS"));
+	}
+
+	@Test
+	void editWithSameGalleryIsModeratedForTheFinalVersion() throws Exception {
+		UUID owner = user(false);
+		String pet = pendingPet(owner);
+		jdbc.update("update pets set status = 'approved' where id = ?::uuid", pet);
+		JsonNode current = json.readTree(mvc.perform(get("/api/pets/" + pet).with(as(owner))).andReturn().getResponse().getContentAsString());
+		String same = "{\"paths\":[\"" + current.get("photos").get(0).get("path").asText() + "\"]}";
+		// the app's edit: PUT /pets (moderation asked for v+1) then PUT /photos with the same gallery (v+2)
+		mvc.perform(withJson(put("/api/pets/" + pet), ApiTest.PET).with(as(owner))).andExpect(jsonPath("$.status").value("pending_review"));
+		clearInvocations(events);
+		mvc.perform(withJson(put("/api/pets/" + pet + "/photos"), same).with(as(owner))).andExpect(status().isOk());
+		int finalVersion = version(pet);
+		verify(events).moderate(argThat(p -> p.version == finalVersion)); // otherwise n8n only ever answers for a stale version
+	}
+
+	@Test
+	void rejectedPetEditedWithoutPhotosGoesBackToDraft() throws Exception {
+		UUID owner = user(false), boss = user(true);
+		String pet = pendingPet(owner);
+		mvc.perform(withJson(post("/api/admin/pets/" + pet + "/reject"), "{\"reason\":\"Fotos de internet\"}").with(as(boss)))
+				.andExpect(jsonPath("$.status").value("rejected")).andExpect(jsonPath("$.photos.length()").value(0));
+		// photos were deleted on reject: an edit alone must not put a photo-less pet in the admin queue
+		mvc.perform(withJson(put("/api/pets/" + pet), ApiTest.PET).with(as(owner))).andExpect(jsonPath("$.status").value("draft"));
 	}
 
 	@Test
@@ -105,7 +134,7 @@ class InternalTest {
 				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
 		mvc.perform(get("/internal/imports/next").header("x-internal-secret", SECRET)).andExpect(jsonPath("$.instagramHandle").value(handle));
 		mvc.perform(withJson(post("/internal/imports/" + job + "/pets"),
-				"{\"pets\":[{\"name\":\"Canela\",\"species\":\"dog\",\"description\":\"Rescatada\",\"photoUrls\":[\"http://evil.test/x.jpg\"],\"sourceUrl\":\"https://instagram.com/p/1\"}]}")
+				"{\"pets\":[{\"name\":\"Canela\",\"species\":\"dog\",\"ageMonths\":999,\"description\":\"" + "Rescatada ".repeat(300) + "\",\"photoUrls\":[\"http://evil.test/x.jpg\"],\"sourceUrl\":\"https://instagram.com/p/1\"}]}")
 				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.created").value(1));
 		mvc.perform(withJson(post("/internal/imports/" + job + "/status"), "{\"status\":\"done\",\"inputTokens\":50000,\"outputTokens\":2000}").header("x-internal-secret", SECRET))
 				.andExpect(status().isNoContent());

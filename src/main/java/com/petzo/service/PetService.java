@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class PetService {
 
 	public static final int PAGE_SIZE = 20;
-	public static final int MAX_PHOTOS = 5;
 	public static final Map<Plan, Integer> PLAN_LIMITS = Map.of(Plan.free, 3, Plan.pro, 30);
 	private static final Set<PetStatus> ACTIVE = EnumSet.of(PetStatus.pending_review, PetStatus.approved);
 
@@ -128,37 +127,6 @@ public class PetService {
 		return new UploadUrl(signed.path(), signed.signedUrl(), signed.token());
 	}
 
-	public PetDto addPhoto(Profile me, UUID id, String path) {
-		Pet pet = editable(me, id);
-		if (!Pattern.matches("pets/" + pet.id + "/[0-9a-f-]{36}\\.jpg", path) || pet.photos.stream().anyMatch(ph -> ph.storagePath.equals(path))) {
-			throw new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_PHOTOS", "Foto inválida");
-		}
-		if (pet.photos.size() >= MAX_PHOTOS) throw ApiException.conflict("TOO_MANY_PHOTOS", "Máximo 5 fotos");
-		if (!storage.exists(path)) throw new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_PHOTOS", "La foto no se subió");
-		PetPhoto photo = new PetPhoto();
-		photo.pet = pet;
-		photo.storagePath = path;
-		photo.position = (short) pet.photos.size();
-		pet.photos.add(photo);
-		// Photo rows do not touch the pets row: bump the version so older moderation results are ignored
-		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
-		resubmit(pet);
-		return toDto(pets.saveAndFlush(pet), true, null);
-	}
-
-	public PetDto deletePhoto(Profile me, UUID id, UUID photoId) {
-		Pet pet = editable(me, id);
-		PetPhoto photo = pet.photos.stream().filter(p -> p.id.equals(photoId)).findFirst().orElseThrow(ApiException::notFound);
-		if (pet.photos.size() == 1 && pet.status != PetStatus.draft) throw ApiException.conflict("PHOTOS_REQUIRED", "La publicación necesita al menos una foto");
-		pet.photos.remove(photo);
-		for (short i = 0; i < pet.photos.size(); i++) pet.photos.get(i).position = i;
-		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
-		resubmit(pet); // the bump discards the in-flight moderation result, so moderate the new version
-		pets.saveAndFlush(pet);
-		storage.deleteAfterCommit(List.of(photo.storagePath));
-		return toDto(pet, true, null);
-	}
-
 	/** Only drafts (Instagram imports the owner does not want); published pets are paused or marked adopted instead. */
 	public void deleteDraft(Profile me, UUID id) {
 		Pet pet = own(me, id);
@@ -192,9 +160,10 @@ public class PetService {
 		}
 		for (PetPhoto ph : pet.photos) ph.position = (short) paths.indexOf(ph.storagePath);
 		pet.photos.sort(java.util.Comparator.comparingInt(ph -> ph.position));
-		// Always bumped: concurrent gallery edits conflict instead of mixing positions
+		// Always bumped: concurrent gallery edits conflict instead of mixing positions. The bump also discards any
+		// in-flight moderation result, so a pet already in review is moderated again even if only the order changed.
 		em.lock(pet, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
-		if (!added.isEmpty() || !removed.isEmpty()) resubmit(pet);
+		if (!added.isEmpty() || !removed.isEmpty() || pet.status == PetStatus.pending_review) resubmit(pet);
 		pets.saveAndFlush(pet);
 		storage.deleteAfterCommit(removed);
 		return toDto(pet, true, null);
@@ -204,7 +173,8 @@ public class PetService {
 
 	private void resubmit(Pet pet) {
 		if (pet.status == PetStatus.draft) return; // imports stay drafts until submitted
-		pet.status = PetStatus.pending_review;
+		// Rejected pets lose their photos: without photos they go back to draft, never to the admin queue
+		pet.status = pet.photos.isEmpty() ? PetStatus.draft : PetStatus.pending_review;
 		pet.moderationReason = null;
 		pet.riskScore = null;
 		if (!pet.photos.isEmpty()) events.moderate(pet);
