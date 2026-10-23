@@ -33,7 +33,9 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] Suite completa en verde
 - [x] Dockerfile multi-stage (probado en local contra la nube)
 - [x] Colección `http/petzo.http` (local y producción)
-- [ ] Repo en GitHub + deploy en Render (Cris)
-- [ ] Colección corrida contra la URL pública
+- [x] Repo en GitHub (`CristianF4zio/petzo-backend`)
+- [x] API corriendo en local (`./mvnw spring-boot:run`, `:8090`) contra Supabase; humo de endpoints públicos OK
+- [ ] Deploy en Render (opcional mientras la demo sea local)
+- [ ] Colección `.http` corrida contra la URL pública (depende del deploy)
 - [x] Revisión de seguridad: 10 de 11 hallazgos corregidos (V3: `version` + permisos por columna; `/internal` con el mismo matcher que MVC; admin solo aprueba `pending_review`)
 - [x] D-28: alta como borrador, `PUT /api/pets/{id}/photos` (galería entera, una moderación), `DELETE /api/pets/{id}` solo para borradores; 20/20 tests y humo local contra Supabase
