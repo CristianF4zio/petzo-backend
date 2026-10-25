@@ -2,22 +2,23 @@
 
 Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende de Cris · `[ ]` pendiente.
 
-## Reto final · requisitos mínimos (estado al 25-oct-2026)
+## Reto final · requisitos mínimos (estado al 25-oct-2026, revisado contra la base y los repos)
 - [x] App React Native con flujo principal y manejo visible de errores y carga (`petzo-frontend/apps/mobile`); probada en iPhone (Expo Go) y en el emulador de Android (login por la API y catálogo)
 - [x] API REST en Spring Boot con validaciones, autorización por JWT y rol, y errores `ProblemDetail` (27 tests)
-- [~] Exactamente dos repos: `petzo-backend` y `petzo-frontend` (panel en `apps/admin`). Falta que Cris archive `petzo-web` en GitHub
+- [~] Exactamente dos repos: `petzo-backend` y `petzo-frontend` (panel en `apps/admin`); el README de `petzo-web` ya apunta al panel nuevo. Falta que Cris archive `petzo-web` en GitHub (sigue activo)
 - [x] App y panel consumen solo la API; solo el backend accede a Supabase (sin SDK en clientes; fotos por `/api/photos/**`)
 - [x] Proyecto Supabase propio y gratuito con BD, Storage y Auth en uso real (prueba de punta a punta del 25-oct)
 - [~] Correo y contraseña por la API: probado contra Supabase real. Google coordinado por la API: la cadena llega a `accounts.google.com`; falta que Cris agregue las Redirect URLs del callback y haga el login real
-- [~] Panel admin protegido por rol en el backend: test + verificado en vivo el 25-oct (las 6 rutas `/api/admin/**` responden 403 a un usuario normal; el panel muestra "sin permisos", captura en `petzo-frontend/docs/evidencia/`). Falta que Cris cree su admin (SQL del README) para probar las vistas
+- [~] Panel admin protegido por rol en el backend: test + verificado en vivo el 25-oct (las 6 rutas `/api/admin/**` responden 403 a un usuario normal; el panel muestra "sin permisos", captura en `petzo-frontend/docs/evidencia/`). Falta: hoy hay 0 admins en la base; Cris crea el suyo (SQL del README) para probar las vistas
 - [~] Dos flujos de n8n (moderación por OpenRouter, notificaciones por Gmail) listos y el túnel probado. Falta importarlos en staging, crear credenciales y ejecutarlos (Cris)
 - [~] Stagehand: corrida real en Chrome con log y captura (4/4 fichas). Falta una importación completa por la API desde el panel (necesita el admin)
 - [x] Skills y agentes registrados con qué se les encargó y cómo se comprobó (`docs/SKILLS_LOG.md`, `docs/AGENTS_LOG.md` en ambos repos)
 - [x] Modelo de Stagehand elegido y justificado con medición (`stagehand-worker/README.md`, D-11 del registro)
 - [x] Plataforma declarada: iOS con Expo Go (`docs/DECISIONS.md` §2)
+- [x] IA real por OpenRouter: match verificado el 25-oct (Kaiser 85 %, razón en español, 3,4 s, registrado en `ai_logs`). La moderación de n8n y el resumen de solicitudes usan la misma clave y modelo
 
 ## Reto final · entregables
-- [ ] URLs de los dos repos y commit final (al cerrar)
+- [~] URLs de los dos repos y commit final: borrador listo en `Desktop/petzo/ENTREGA.md`; falta poner el commit final al cerrar
 - [x] README desde cero en ambos repos (versiones, variables, Supabase, Google, arranque, usuario y admin de prueba, API, limitaciones)
 - [ ] Video de 3–5 min (Cris)
 - [ ] Enlaces y evidencia de ejecución de los 2 flujos de n8n (Cris, tras importarlos)
