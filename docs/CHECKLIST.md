@@ -3,13 +3,13 @@
 Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende de Cris · `[ ]` pendiente.
 
 ## Reto final · requisitos mínimos (estado al 25-oct-2026)
-- [x] App React Native con flujo principal y manejo visible de errores y carga (`petzo-frontend/apps/mobile`)
+- [x] App React Native con flujo principal y manejo visible de errores y carga (`petzo-frontend/apps/mobile`); probada en iPhone (Expo Go) y en el emulador de Android (login por la API y catálogo)
 - [x] API REST en Spring Boot con validaciones, autorización por JWT y rol, y errores `ProblemDetail` (27 tests)
 - [~] Exactamente dos repos: `petzo-backend` y `petzo-frontend` (panel en `apps/admin`). Falta que Cris archive `petzo-web` en GitHub
 - [x] App y panel consumen solo la API; solo el backend accede a Supabase (sin SDK en clientes; fotos por `/api/photos/**`)
 - [x] Proyecto Supabase propio y gratuito con BD, Storage y Auth en uso real (prueba de punta a punta del 25-oct)
 - [~] Correo y contraseña por la API: probado contra Supabase real. Google coordinado por la API: la cadena llega a `accounts.google.com`; falta que Cris agregue las Redirect URLs del callback y haga el login real
-- [~] Panel admin protegido por rol en el backend (403 a no-admin, test). Falta crear el admin (SQL del README) y probarlo en vivo
+- [~] Panel admin protegido por rol en el backend: test + verificado en vivo el 25-oct (las 6 rutas `/api/admin/**` responden 403 a un usuario normal; el panel muestra "sin permisos", captura en `petzo-frontend/docs/evidencia/`). Falta que Cris cree su admin (SQL del README) para probar las vistas
 - [~] Dos flujos de n8n (moderación por OpenRouter, notificaciones por Gmail) listos y el túnel probado. Falta importarlos en staging, crear credenciales y ejecutarlos (Cris)
 - [~] Stagehand: corrida real en Chrome con log y captura (4/4 fichas). Falta una importación completa por la API desde el panel (necesita el admin)
 - [x] Skills y agentes registrados con qué se les encargó y cómo se comprobó (`docs/SKILLS_LOG.md`, `docs/AGENTS_LOG.md` en ambos repos)
