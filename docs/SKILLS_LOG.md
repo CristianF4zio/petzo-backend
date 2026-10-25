@@ -1,6 +1,6 @@
 # Skills log
 
-| Sprint | Skill | Para qué la usaste | Resultado |
+| Sprint | Skill | Para qué la usaste | Resultado y cómo lo comprobé |
 | --- | --- | --- | --- |
 | B0 | (ninguna nueva) | Scaffolding con Spring Initializr y Flyway | — |
 | B1 | api-and-interface-design | Contrato REST de §17: errores ProblemDetail con `code`, validación en el borde, paginación `{items,page,pageSize,total}` | 27 rutas documentadas en Swagger |
@@ -11,3 +11,5 @@
 | F1 | ponytail (nivel full, toda la sesión) | Cambio mínimo y completo en los endpoints nuevos y en la migración del contrato | Un solo `PUT /photos` en vez de reordenar + borrar por separado; se reusó `editable()`, `resubmit()` y `deleteAfterCommit()` sin capas nuevas |
 | F1 | ponytail:ponytail-audit | Auditoría completa del backend (solo lectura) | 14 hallazgos; el más grave: editar sin cambiar fotos deja la mascota en revisión para siempre (versión subida sin moderar) |
 | F1 | ponytail (full) + test de mutación | Arreglar los hallazgos 1, 2, 5–10, 19 y 20 de la auditoría | Cada arreglo es el cambio mínimo; el test del hallazgo 1 falla si se quita el arreglo (verificado) |
+| Reto | ponytail (full) | Auth y fotos por la API, IA por OpenRouter, worker de Stagehand según la guía v4 | Reusé `ApiException`, `StorageClient` y los tests existentes; 27/27 tests y prueba de punta a punta contra Supabase real |
+| Reto | api-and-interface-design (criterios ya cargados) | Contrato de `/api/auth/*`, Google con `flow` + `secret` y subida multipart, fijado antes de repartir el trabajo entre agentes | La app y el panel se construyeron en paralelo contra ese contrato sin cambios después |

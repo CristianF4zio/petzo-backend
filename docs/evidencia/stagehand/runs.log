@@ -1,0 +1,8 @@
+{"at":"2026-10-25T13:44:04.601Z","model":"openai/gpt-4.1-mini","step":"goto","url":"http://localhost:8090/demo/fundaciones/patas-del-avila.html"}
+{"at":"2026-10-25T13:44:05.014Z","model":"openai/gpt-4.1-mini","step":"screenshot","file":"evidencia/patas-del-avila-1792935840822.png"}
+{"at":"2026-10-25T13:44:08.743Z","model":"openai/gpt-4.1-mini","step":"extract","ms":7921,"pets":["Luna (cat, female, small, 3m)","Toby (dog, male, medium, 14m)","Canela (dog, female, large, 24m)","Simón (cat, male, medium, 48m)"],"tokens":{"calls":2,"input":1506,"output":251}}
+{"at":"2026-10-25T13:44:13.171Z","model":"openai/gpt-4.1-mini","step":"dry-run","found":4,"costUsd":0,"keyUsageUsd":0}
+{"at":"2026-10-25T13:46:24.421Z","model":"google/gemini-2.5-flash","step":"goto","url":"http://localhost:8090/demo/fundaciones/patas-del-avila.html"}
+{"at":"2026-10-25T13:46:24.699Z","model":"google/gemini-2.5-flash","step":"screenshot","file":"evidencia/patas-del-avila-1792935981229.png"}
+{"at":"2026-10-25T13:46:27.731Z","model":"google/gemini-2.5-flash","step":"extract","ms":6502,"pets":["Luna (cat, female, small, 3m)","Toby (dog, male, medium, 14m)","Canela (dog, female, large, 24m)","Simón (cat, male, medium, 48m)"],"tokens":{"calls":2,"input":1299,"output":314}}
+{"at":"2026-10-25T13:46:32.270Z","model":"google/gemini-2.5-flash","step":"dry-run","found":4,"costUsd":0,"keyUsageUsd":0.001004}
