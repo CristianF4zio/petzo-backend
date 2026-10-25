@@ -17,10 +17,10 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 
 ### 2. Plataforma móvil — 25-oct-2026
 - **Problema:** el reto pide escoger iOS, Android o ambas y una forma reproducible de probar.
-- **Decisión:** **iOS, con Expo Go en un iPhone físico** (D-15). El código es el mismo para Android.
+- **Decisión:** **iOS, con Expo Go en un iPhone físico** (D-15). El 25-oct también se probó en el emulador de Android Studio (Expo Go + `adb reverse`): Bienvenida, login por la API y catálogo.
 - **Por qué:** es el dispositivo donde de verdad probé; Expo Go no necesita cuentas de desarrollador ni tiendas.
 - **Descartado:** Android con APK de EAS: la cola de EAS tarda 20–40 min y no hay emulador listo; queda como opción, no como plataforma declarada.
-- **Límite:** Android no se probó en dispositivo.
+- **Límite:** Android probado solo en emulador, no en un teléfono físico.
 - **IA:** preparó los pasos de Expo Go y el login de Expo CLI. **Yo:** corrí la app en mi iPhone y reporté los errores (sin Bienvenida, `GO_BACK`).
 - **Evidencia:** `petzo-frontend` commit `57779d9` (corrección de rutas protegidas tras mi prueba).
 
