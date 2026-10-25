@@ -44,20 +44,17 @@ public class ProfileService {
 		me.fullName = in.fullName().trim();
 		me.whatsapp = wa;
 		me.municipalityId = in.municipalityId();
-		return toDto(profiles.saveAndFlush(me));
-	}
-
-	public UploadUrl avatarUploadUrl(Profile me) {
-		var s = storage.signUpload(avatarPath(me), true);
-		return new UploadUrl(s.path(), s.signedUrl(), s.token());
+		return toDto(profiles.saveAndFlush(me), storage);
 	}
 
 	// Same path on every upload (SPEC §15); the version param busts caches
-	public ProfileDto saveAvatar(Profile me) {
-		if (!storage.exists(avatarPath(me))) throw ApiException.conflict("AVATAR_NOT_UPLOADED", "Sube la imagen antes de guardarla");
+	public ProfileDto uploadAvatar(Profile me, org.springframework.web.multipart.MultipartFile file) {
+		storage.upload(avatarPath(me), StorageClient.readJpeg(file), "image/jpeg");
 		me.avatarUrl = storage.publicUrl(avatarPath(me)) + "?v=" + System.currentTimeMillis();
-		return toDto(profiles.saveAndFlush(me));
+		return toDto(profiles.saveAndFlush(me), storage);
 	}
+
+	public ProfileDto me(Profile me) { return toDto(me, storage); }
 
 	public ProfileDto requestFoundation(Profile me, FoundationRequest in) {
 		if (me.verificationStatus == VerificationStatus.verified) throw ApiException.conflict("ALREADY_VERIFIED", "Tu fundación ya está verificada");
@@ -66,13 +63,13 @@ public class ProfileService {
 		me.foundationInstagram = in.foundationInstagram().replaceFirst("^@", "");
 		me.foundationBio = in.foundationBio();
 		me.verificationStatus = VerificationStatus.pending;
-		return toDto(profiles.saveAndFlush(me));
+		return toDto(profiles.saveAndFlush(me), storage);
 	}
 
 	private static String avatarPath(Profile me) { return "avatars/" + me.id + ".jpg"; }
 
-	public static ProfileDto toDto(Profile p) {
-		return new ProfileDto(p.id, p.fullName, p.avatarUrl, p.whatsapp, p.municipalityId, p.role, p.accountType, p.foundationName,
-				p.foundationInstagram, p.foundationBio, p.verificationStatus, p.plan, p.isComplete());
+	public static ProfileDto toDto(Profile p, StorageClient storage) {
+		return new ProfileDto(p.id, p.fullName, storage.clientAvatar(p.avatarUrl), p.whatsapp, p.municipalityId, p.role, p.accountType, p.foundationName,
+				p.foundationInstagram, p.foundationBio, p.verificationStatus, p.plan, p.isComplete(), p.suspended);
 	}
 }

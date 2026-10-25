@@ -28,6 +28,9 @@ public class SecurityConfig {
 				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(a -> a
 						.requestMatchers(HttpMethod.GET, "/api/pets", "/api/pets/*", "/api/municipalities").permitAll()
+						// Photos are the public catalog content (D-20); sign-in endpoints run before there is a token. Demo site for the Stagehand import.
+						.requestMatchers(HttpMethod.GET, "/api/photos/**", "/demo/**").permitAll()
+						.requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/google/**").permitAll()
 						// Same matcher as MVC (decoded path), so /%69nternal/... cannot slip past the check
 						.requestMatchers("/internal/**").access((auth, ctx) -> new AuthorizationDecision(secretMatches(props.internalSecret(), ctx.getRequest().getHeader("x-internal-secret"))))
 						.requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

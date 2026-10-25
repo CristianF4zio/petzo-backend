@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petzo.service.Events;
 import com.petzo.storage.StorageClient;
-import com.petzo.storage.StorageClient.SignedUpload;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,6 @@ class InternalTest {
 
 	@BeforeEach
 	void stubs() {
-		when(storage.signUpload(anyString(), anyBoolean())).thenAnswer(i -> new SignedUpload(i.getArgument(0), "https://signed", "tok"));
 		when(storage.exists(anyString())).thenReturn(true);
 		when(storage.publicUrl(anyString())).thenAnswer(i -> "https://cdn/" + i.getArgument(0));
 	}

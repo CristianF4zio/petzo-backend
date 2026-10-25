@@ -70,7 +70,7 @@ public class RequestService {
 	@Transactional(readOnly = true)
 	public List<MyRequestDto> mine(Profile me) {
 		return requests.findByAdopterIdOrderByCreatedAtDesc(me.id).stream().map(r -> new MyRequestDto(r.id, r.status, r.pet.id, r.pet.name,
-				r.pet.photos.isEmpty() ? null : storage.publicUrl(r.pet.photos.get(0).storagePath), r.createdAt, r.decidedAt)).toList();
+				r.pet.photos.isEmpty() ? null : storage.clientUrl(r.pet.photos.get(0).storagePath), r.createdAt, r.decidedAt)).toList();
 	}
 
 	// HU-09: approving one request leaves the others pending
@@ -99,7 +99,7 @@ public class RequestService {
 
 	private RequestDto toDto(AdoptionRequest r) {
 		Profile a = r.adopter;
-		return new RequestDto(r.id, r.pet.id, r.status, new AdopterDto(a.id, a.fullName, a.avatarUrl, a.municipalityId), r.answers, r.motivation,
+		return new RequestDto(r.id, r.pet.id, r.status, new AdopterDto(a.id, a.fullName, storage.clientAvatar(a.avatarUrl), a.municipalityId), r.answers, r.motivation,
 				r.aiSummary, r.aiScore, r.createdAt, r.decidedAt);
 	}
 }

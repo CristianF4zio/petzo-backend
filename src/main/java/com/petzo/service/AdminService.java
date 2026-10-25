@@ -69,7 +69,7 @@ public class AdminService {
 
 	@Transactional(readOnly = true)
 	public List<ProfileDto> foundations() {
-		return profiles.findByVerificationStatusOrderByUpdatedAtDesc(VerificationStatus.pending).stream().map(ProfileService::toDto).toList();
+		return profiles.findByVerificationStatusOrderByUpdatedAtDesc(VerificationStatus.pending).stream().map(p -> ProfileService.toDto(p, storage)).toList();
 	}
 
 	// Verified foundations get the Pro plan (SPEC §2)
@@ -77,25 +77,25 @@ public class AdminService {
 		Profile p = profiles.findById(userId).orElseThrow(ApiException::notFound);
 		p.verificationStatus = approve ? VerificationStatus.verified : VerificationStatus.rejected;
 		if (approve) p.plan = Plan.pro;
-		return ProfileService.toDto(profiles.saveAndFlush(p));
+		return ProfileService.toDto(profiles.saveAndFlush(p), storage);
 	}
 
 	public ProfileDto setPlan(UUID userId, Plan plan) {
 		Profile p = profiles.findById(userId).orElseThrow(ApiException::notFound);
 		p.plan = plan;
-		return ProfileService.toDto(profiles.saveAndFlush(p));
+		return ProfileService.toDto(profiles.saveAndFlush(p), storage);
 	}
 
 	public ProfileDto suspend(UUID userId, boolean suspended) {
 		Profile p = profiles.findById(userId).orElseThrow(ApiException::notFound);
 		p.suspended = suspended;
-		return ProfileService.toDto(profiles.saveAndFlush(p));
+		return ProfileService.toDto(profiles.saveAndFlush(p), storage);
 	}
 
 	@Transactional(readOnly = true)
 	public List<ProfileDto> users() {
 		return profiles.findAll(org.springframework.data.domain.PageRequest.of(0, 200, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")))
-				.map(ProfileService::toDto).getContent();
+				.map(p -> ProfileService.toDto(p, storage)).getContent();
 	}
 
 	@Transactional(readOnly = true)

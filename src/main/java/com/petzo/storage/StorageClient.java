@@ -8,7 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /** Supabase Storage REST with the service_role key (backend only, SPEC §15). */
 @Component
@@ -17,8 +18,6 @@ public class StorageClient {
 	private static final Logger log = LoggerFactory.getLogger(StorageClient.class);
 
 	public static final String BUCKET = "pet-photos";
-
-	public record SignedUpload(String path, String signedUrl, String token) {}
 
 	private final RestClient http;
 	private final String base;
@@ -32,27 +31,49 @@ public class StorageClient {
 				.build();
 	}
 
+	/** Supabase's own URL: only for server-side consumers (n8n moderation), never sent to the app or the panel. */
 	public String publicUrl(String path) {
 		return base + "/object/public/" + BUCKET + "/" + path;
 	}
 
-	@SuppressWarnings("unchecked")
-	public SignedUpload signUpload(String path, boolean upsert) {
-		Map<String, String> res = http.post()
-				.uri("/object/upload/sign/" + BUCKET + "/" + path) // server-built path; a template var would encode "/"
-				.header("x-upsert", String.valueOf(upsert))
-				.body(Map.of())
-				.retrieve()
-				.body(Map.class);
-		String url = base + res.get("url");
-		String token = UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst("token");
-		return new SignedUpload(path, url, token);
+	/** URL the app and the panel load a photo from: this API (GET /api/photos/**), so clients never touch Storage. */
+	public String clientUrl(String path) {
+		String origin = RequestContextHolder.getRequestAttributes() == null ? "" : ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
+		return origin + "/api/photos/" + path;
 	}
 
-	/** Server-side upload (Instagram imports); app uploads go through signed URLs. */
+	/** Stored avatar URLs pointing at our bucket become API URLs; Google avatars stay as they are. */
+	public String clientAvatar(String avatarUrl) {
+		String prefix = base + "/object/public/" + BUCKET + "/";
+		return avatarUrl != null && avatarUrl.startsWith(prefix) ? clientUrl(avatarUrl.substring(prefix.length())) : avatarUrl;
+	}
+
+	/** Server-side upload (app photos, avatars, imports); upsert so an avatar can be replaced. */
 	public void upload(String path, byte[] bytes, String contentType) {
-		http.post().uri("/object/" + BUCKET + "/" + path).contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+		http.post().uri("/object/" + BUCKET + "/" + path).header("x-upsert", "true").contentType(org.springframework.http.MediaType.parseMediaType(contentType))
 				.body(bytes).retrieve().toBodilessEntity();
+	}
+
+	/** Bytes and content type for the photo proxy; empty when the file is missing. */
+	public java.util.Optional<org.springframework.http.ResponseEntity<byte[]>> download(String path) {
+		try {
+			return java.util.Optional.of(http.get().uri("/object/public/" + BUCKET + "/" + path).retrieve().toEntity(byte[].class));
+		} catch (RestClientResponseException e) {
+			return java.util.Optional.empty();
+		}
+	}
+
+	/** RNF-06: the app compresses to ~500 KB; 2 MB and real JPEG bytes are checked here, not trusted from the client. */
+	public static byte[] readJpeg(org.springframework.web.multipart.MultipartFile file) {
+		var invalid = new com.petzo.common.ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_PHOTOS", "Sube una foto JPEG de hasta 2 MB");
+		if (file == null || file.isEmpty() || file.getSize() > 2_000_000) throw invalid;
+		try {
+			byte[] b = file.getBytes();
+			if (b.length < 3 || (b[0] & 0xFF) != 0xFF || (b[1] & 0xFF) != 0xD8 || (b[2] & 0xFF) != 0xFF) throw invalid;
+			return b;
+		} catch (java.io.IOException e) {
+			throw invalid;
+		}
 	}
 
 	public boolean exists(String path) {

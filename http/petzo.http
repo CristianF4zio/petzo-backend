@@ -1,8 +1,35 @@
 # Petzo API — run with the VS Code REST Client or IntelliJ HTTP client.
-# Pick the environment in http-client.env.json (local / production). {{token}} = a Supabase access token.
+# Pick the environment in http-client.env.json (local / production). {{token}} = accessToken from /api/auth/login.
 
 ### Health
 GET {{api}}/actuator/health
+
+### Register (the API calls Supabase Auth; clients never do)
+POST {{api}}/api/auth/register
+Content-Type: application/json
+
+{"email": "andreina.demo@example.com", "password": "una-clave-de-prueba", "fullName": "Andreína Márquez"}
+
+### Login → {accessToken, refreshToken, expiresIn}
+POST {{api}}/api/auth/login
+Content-Type: application/json
+
+{"email": "andreina.demo@example.com", "password": "una-clave-de-prueba"}
+
+### Refresh
+POST {{api}}/api/auth/refresh
+Content-Type: application/json
+
+{"refreshToken": "REPLACE"}
+
+### Google: open in a browser; the API redirects to Google and back to `redirect` without tokens, then POST /claim
+# GET {{api}}/api/auth/google/start?flow=<uuid>&challenge=<base64url(sha256(secret))>&redirect=http://localhost:5173/auth-callback
+
+### Google claim (one-time, 5 min)
+POST {{api}}/api/auth/google/claim
+Content-Type: application/json
+
+{"flow": "REPLACE-UUID", "secret": "REPLACE-SECRET"}
 
 ### Municipalities (public)
 GET {{api}}/api/municipalities
@@ -38,9 +65,17 @@ Content-Type: application/json
 
 {"species": "dog", "name": "Toby", "ageMonths": 14, "sex": "male", "size": "medium", "municipalityId": 2, "vaccinated": true, "sterilized": true, "dewormed": false, "description": "Tranquilo en casa y feliz en la calle."}
 
-### Photo upload URL → PUT the JPEG to signedUrl (one per new photo)
-POST {{api}}/api/pets/{{petId}}/photos/upload-url
+### Upload one photo (JPEG ≤ 2 MB) through the API → {path}; it joins the gallery with PUT /photos
+POST {{api}}/api/pets/{{petId}}/photos/upload
 Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=petzo
+
+--petzo
+Content-Disposition: form-data; name="file"; filename="toby.jpg"
+Content-Type: image/jpeg
+
+< ../src/main/resources/static/demo/img/toby.jpg
+--petzo--
 
 ### Save the whole gallery in order (first = cover; 1 to 5 paths; kept paths stay, missing ones are deleted)
 PUT {{api}}/api/pets/{{petId}}/photos

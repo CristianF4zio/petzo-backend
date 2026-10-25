@@ -1,27 +1,24 @@
 package com.petzo.ai;
 
-import com.anthropic.client.AnthropicClient;
-import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.models.messages.Message;
-import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.models.messages.OutputConfig;
-import com.anthropic.models.messages.StopReason;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petzo.config.PetzoProperties;
+import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 /**
- * Claude Haiku 5.5 for pre-evaluation and match. Short JSON out, validated by the caller.
- * Every call lands in ai_logs; over the daily token cap the AI is skipped (callers fall back to manual).
+ * Pre-evaluation and match through OpenRouter's OpenAI-compatible API (D-29; model in AI_MODEL). Short JSON out, validated
+ * by the caller. Every call lands in ai_logs; over the daily token cap the AI is skipped (callers fall back to manual).
  */
 @Service
 public class AiService {
@@ -31,15 +28,18 @@ public class AiService {
 	private final PetzoProperties props;
 	private final JdbcTemplate jdbc;
 	private final ObjectMapper json;
-	private final AnthropicClient client;
+	private final RestClient client;
 
 	public AiService(PetzoProperties props, JdbcTemplate jdbc, ObjectMapper json) {
 		this.props = props;
 		this.jdbc = jdbc;
 		this.json = json;
-		this.client = props.anthropicApiKey() == null || props.anthropicApiKey().isBlank()
+		var timeouts = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+		timeouts.setReadTimeout(Duration.ofSeconds(30));
+		this.client = props.openrouterApiKey() == null || props.openrouterApiKey().isBlank()
 				? null
-				: AnthropicOkHttpClient.builder().apiKey(props.anthropicApiKey()).timeout(Duration.ofSeconds(30)).build();
+				: RestClient.builder().baseUrl("https://openrouter.ai/api/v1").requestFactory(timeouts)
+						.defaultHeader("Authorization", "Bearer " + props.openrouterApiKey()).build();
 	}
 
 	public long tokensToday() {
@@ -49,7 +49,7 @@ public class AiService {
 
 	public boolean available() { return client != null && underDailyCap(); }
 
-	/** RNF-05: shared by every AI caller, including n8n moderation (which uses its own Claude key). */
+	/** RNF-05: shared by every AI caller, including n8n moderation (which calls OpenRouter with its own credential). */
 	public boolean underDailyCap() { return tokensToday() < props.aiDailyTokenCap(); }
 
 	/** task is an ai_task label: moderation | pre_evaluation | match | import. */
@@ -59,19 +59,17 @@ public class AiService {
 			return Optional.empty();
 		}
 		try {
-			// No temperature/top_p/prefill: Haiku 5.5 rejects them. Low effort keeps short JSON tasks cheap.
-			Message res = client.messages().create(MessageCreateParams.builder()
-					.model(props.aiModel())
-					.maxTokens(2000L)
-					.system(system)
-					.outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.LOW).build())
-					.addUserMessage(user)
-					.build());
-			String text = res.content().stream().flatMap(b -> b.text().stream()).map(t -> t.text()).collect(Collectors.joining());
-			boolean refused = res.stopReason().map(r -> r.equals(StopReason.REFUSAL)).orElse(false);
-			JsonNode parsed = refused ? null : parse(text);
-			record(task, entityType, entityId, res.usage().inputTokens(), res.usage().outputTokens(),
-					parsed != null ? parsed : json.valueToTree(Map.of("error", refused ? "refusal" : "invalid_json", "raw", text.length() > 500 ? text.substring(0, 500) : text)));
+			JsonNode res = client.post().uri("/chat/completions").body(Map.of(
+					"model", props.aiModel(),
+					"max_tokens", 800,
+					"response_format", Map.of("type", "json_object"),
+					"messages", List.of(Map.of("role", "system", "content", system), Map.of("role", "user", "content", user))))
+					.retrieve().body(JsonNode.class);
+			String text = res.path("choices").path(0).path("message").path("content").asText("");
+			JsonNode parsed = parse(text);
+			JsonNode usage = res.path("usage");
+			record(task, entityType, entityId, usage.path("prompt_tokens").asLong(), usage.path("completion_tokens").asLong(),
+					parsed != null ? parsed : json.valueToTree(Map.of("error", "invalid_json", "raw", text.length() > 500 ? text.substring(0, 500) : text)));
 			return Optional.ofNullable(parsed);
 		} catch (Exception e) {
 			log.warn("AI call failed for {}: {}", task, e.getMessage());
@@ -86,7 +84,7 @@ public class AiService {
 				task, entityType, entityId, props.aiModel(), input, output, result.toString());
 	}
 
-	// The model sometimes wraps JSON in ``` fences; anything else is invalid
+	// Some models still wrap JSON in ``` fences; anything else is invalid
 	private JsonNode parse(String text) {
 		String body = text.trim().replaceAll("^```(?:json)?\\s*|\\s*```$", "");
 		try {

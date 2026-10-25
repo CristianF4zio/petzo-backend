@@ -3,6 +3,7 @@ package com.petzo.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petzo.ai.AiService;
 import com.petzo.common.ApiException;
+import com.petzo.config.PetzoProperties;
 import com.petzo.domain.Pet;
 import com.petzo.domain.PetPhoto;
 import com.petzo.domain.Profile;
@@ -42,9 +43,11 @@ public class InternalService {
 	private final Events events;
 	private final JdbcTemplate jdbc;
 	private final ObjectMapper json;
+	private final PetzoProperties props;
 	private final HttpClient download = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
 
-	public InternalService(PetRepo pets, ProfileRepo profiles, ImportJobRepo jobs, StorageClient storage, AiService ai, Events events, JdbcTemplate jdbc, ObjectMapper json) {
+	public InternalService(PetRepo pets, ProfileRepo profiles, ImportJobRepo jobs, StorageClient storage, AiService ai, Events events, JdbcTemplate jdbc, ObjectMapper json, PetzoProperties props) {
+		this.props = props;
 		this.pets = pets;
 		this.profiles = profiles;
 		this.jobs = jobs;
@@ -154,7 +157,8 @@ public class InternalService {
 		try {
 			URI uri = URI.create(url);
 			String host = String.valueOf(uri.getHost());
-			if (!"https".equals(uri.getScheme()) || !(host.endsWith(".cdninstagram.com") || host.endsWith(".fbcdn.net"))) return Optional.empty();
+			// SSRF guard: only the configured demo foundation site (IMPORT_ALLOWED_HOSTS), never arbitrary hosts
+			if (!("https".equals(uri.getScheme()) || "http".equals(uri.getScheme())) || !props.importAllowedHosts().contains(host)) return Optional.empty();
 			HttpResponse<java.io.InputStream> res = download.send(HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(20)).build(), HttpResponse.BodyHandlers.ofInputStream());
 			try (var body = res.body()) {
 				if (res.statusCode() != 200) return Optional.empty();

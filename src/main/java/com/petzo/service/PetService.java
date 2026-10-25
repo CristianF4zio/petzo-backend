@@ -120,11 +120,14 @@ public class PetService {
 		return toDto(pet, true, null);
 	}
 
-	public UploadUrl uploadUrl(Profile me, UUID id) {
+	/** Stores one photo and returns its path; it joins the gallery only with PUT /photos (D-28). */
+	public PhotoPath uploadPhoto(Profile me, UUID id, org.springframework.web.multipart.MultipartFile file) {
 		Pet pet = editable(me, id);
 		// No count check here: a full gallery may upload a replacement before PUT /photos drops the old one (max 5 is enforced on save)
-		var signed = storage.signUpload("pets/" + pet.id + "/" + UUID.randomUUID() + ".jpg", false);
-		return new UploadUrl(signed.path(), signed.signedUrl(), signed.token());
+		byte[] bytes = StorageClient.readJpeg(file);
+		String path = "pets/" + pet.id + "/" + UUID.randomUUID() + ".jpg";
+		storage.upload(path, bytes, "image/jpeg");
+		return new PhotoPath(path);
 	}
 
 	/** Only drafts (Instagram imports the owner does not want); published pets are paused or marked adopted instead. */
@@ -217,8 +220,8 @@ public class PetService {
 	public PetDto toDto(Pet p, boolean privileged, Long publisherCount) {
 		Profile o = p.owner;
 		String name = o.isVerifiedFoundation() || (o.accountType == AccountType.foundation && o.foundationName != null) ? o.foundationName : o.fullName;
-		var publisher = new PublisherDto(o.id, name, o.avatarUrl, o.municipalityId, o.accountType == AccountType.foundation, o.isVerifiedFoundation(), publisherCount);
-		var photos = p.photos.stream().map(ph -> new PhotoDto(ph.id, storage.publicUrl(ph.storagePath), ph.storagePath)).toList();
+		var publisher = new PublisherDto(o.id, name, storage.clientAvatar(o.avatarUrl), o.municipalityId, o.accountType == AccountType.foundation, o.isVerifiedFoundation(), publisherCount);
+		var photos = p.photos.stream().map(ph -> new PhotoDto(ph.id, storage.clientUrl(ph.storagePath), ph.storagePath)).toList();
 		return new PetDto(p.id, p.species, p.name, p.ageMonths, p.sex, p.size, p.municipalityId, p.vaccinated, p.sterilized, p.dewormed,
 				p.description, p.status, p.source, p.version, photos, publisher, privileged ? p.moderationReason : null, privileged ? p.riskScore : null,
 				p.createdAt, p.updatedAt);

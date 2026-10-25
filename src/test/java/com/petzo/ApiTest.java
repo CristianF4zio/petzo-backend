@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petzo.storage.StorageClient;
-import com.petzo.storage.StorageClient.SignedUpload;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -39,12 +39,18 @@ class ApiTest {
 
 	@BeforeEach
 	void storageStub() {
-		when(storage.signUpload(anyString(), anyBoolean())).thenAnswer(i -> new SignedUpload(i.getArgument(0), "https://signed", "tok"));
 		when(storage.exists(anyString())).thenReturn(true);
 		when(storage.publicUrl(anyString())).thenAnswer(i -> "https://cdn/" + i.getArgument(0));
 	}
 
 	// ---- helpers ----
+
+	// smallest bytes that pass the JPEG magic-number check
+	static final byte[] JPEG = { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 16 };
+
+	static org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder upload(String petId) {
+		return multipart("/api/pets/" + petId + "/photos/upload").file(new MockMultipartFile("file", "photo.jpg", "image/jpeg", JPEG));
+	}
 
 	UUID user(String name, boolean complete) {
 		UUID id = UUID.randomUUID();
@@ -112,7 +118,7 @@ class ApiTest {
 		call(withJson(post("/api/pets"), PET.replace("dog", "cow")).with(as(owner)), 422);
 		String id = publish(owner);
 		call(withJson(put("/api/pets/" + id + "/photos"), "{\"paths\":[\"pets/other/x.jpg\"]}").with(as(owner)), 422);
-		call(post("/api/pets/" + id + "/photos/upload-url").with(as(other)), 404);
+		call(upload(id).with(as(other)), 404);
 
 		call(get("/api/pets/" + id).with(as(other)), 404); // pending is private
 		mvc.perform(get("/api/pets/" + id).with(as(owner))).andExpect(jsonPath("$.status").value("pending_review"));
@@ -158,7 +164,9 @@ class ApiTest {
 		String id = publish(owner);
 		call(withJson(put("/api/pets/" + id + "/photos"), gallery(id, 6)).with(as(owner)), 422); // max 5
 		call(withJson(put("/api/pets/" + id + "/photos"), gallery(id, 5)).with(as(owner)), 200);
-		call(post("/api/pets/" + id + "/photos/upload-url").with(as(owner)), 200); // a full gallery can still upload a replacement
+		mvc.perform(upload(id).with(as(owner))).andExpect(status().isOk()).andExpect(jsonPath("$.path").value(org.hamcrest.Matchers.startsWith("pets/" + id + "/"))); // a full gallery can still upload a replacement
+		verify(storage).upload(startsWith("pets/" + id + "/"), any(), eq("image/jpeg"));
+		call(multipart("/api/pets/" + id + "/photos/upload").file(new MockMultipartFile("file", "x.png", "image/png", "not a jpeg".getBytes())).with(as(owner)), 422);
 		verify(storage).deleteAfterCommit(argThat(l -> l.size() == 1)); // the replaced photo leaves Storage
 		mvc.perform(delete("/api/pets/" + id).with(as(owner))).andExpect(jsonPath("$.code").value("INVALID_STATUS")); // only drafts
 	}

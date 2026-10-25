@@ -17,7 +17,7 @@ public final class Dtos {
 
 	public record ProfileDto(UUID id, String fullName, String avatarUrl, String whatsapp, Short municipalityId, Role role,
 			AccountType accountType, String foundationName, String foundationInstagram, String foundationBio,
-			VerificationStatus verificationStatus, Plan plan, boolean complete) {}
+			VerificationStatus verificationStatus, Plan plan, boolean complete, boolean suspended) {}
 
 	public record UpdateMe(@NotBlank @Size(min = 2, max = 80) String fullName, @NotBlank String whatsapp, @NotNull Short municipalityId) {}
 
@@ -43,7 +43,7 @@ public final class Dtos {
 
 	public record PhotosInput(@NotNull @Size(min = 1, max = 5, message = "Entre 1 y 5 fotos") List<@NotBlank String> paths) {}
 
-	public record UploadUrl(String path, String signedUrl, String token) {}
+	public record PhotoPath(String path) {}
 
 	public record ReportInput(@NotBlank @Size(min = 3, max = 500) String reason) {}
 
@@ -81,7 +81,8 @@ public final class Dtos {
 
 	public record ImportStatusInput(@NotNull ImportStatus status, @Size(max = 500) String error, long inputTokens, long outputTokens) {}
 
-	public record ImportInput(@NotBlank @Pattern(regexp = "@?[A-Za-z0-9._]{1,30}") String instagramHandle) {}
+	/** Identifier of the (demo) foundation site to import, e.g. patas-del-avila; the field keeps its original name. */
+	public record ImportInput(@NotBlank @Pattern(regexp = "@?[A-Za-z0-9._-]{1,40}") String instagramHandle) {}
 
 	// Admin
 	public record RejectInput(@NotBlank @Size(max = 500) String reason) {}

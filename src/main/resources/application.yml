@@ -26,6 +26,11 @@ spring:
   threads:
     virtual:
       enabled: true
+  servlet:
+    multipart:
+      # photos are compressed to ~500 KB in the app; StorageClient.readJpeg enforces 2 MB
+      max-file-size: 2MB
+      max-request-size: 3MB
 
 server:
   port: ${PORT:8080}
@@ -41,9 +46,14 @@ management:
 petzo:
   supabase-url: ${SUPABASE_URL}
   service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+  supabase-anon-key: ${SUPABASE_ANON_KEY}
   internal-secret: ${INTERNAL_SECRET}
-  anthropic-api-key: ${ANTHROPIC_API_KEY:}
-  ai-model: ${AI_MODEL:claude-haiku-5-5}
+  openrouter-api-key: ${OPENROUTER_API_KEY:}
+  ai-model: ${AI_MODEL:openai/gpt-4.1-mini}
   ai-daily-token-cap: ${AI_DAILY_TOKEN_CAP:2000000}
   n8n-moderation-url: ${N8N_MODERATION_WEBHOOK_URL:}
   n8n-notify-url: ${N8N_NOTIFY_WEBHOOK_URL:}
+  # Where the API may send the browser back after Google sign-in (prefix match): app deep links and the admin panel
+  auth-redirect-allowlist: ${AUTH_REDIRECT_ALLOWLIST:exp://,petzo://,http://localhost:5173}
+  # Hosts the import may download photos from (the demo foundation site the Stagehand worker reads)
+  import-allowed-hosts: ${IMPORT_ALLOWED_HOSTS:localhost}

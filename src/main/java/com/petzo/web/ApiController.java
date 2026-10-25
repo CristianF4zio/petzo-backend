@@ -8,9 +8,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /** Public catalog, the signed-in user and their pets. */
 @RestController
@@ -54,16 +56,13 @@ public class ApiController {
 	// ---- me ----
 
 	@GetMapping("/me")
-	ProfileDto me(@AuthenticationPrincipal Jwt jwt) { return ProfileService.toDto(current.require(jwt)); }
+	ProfileDto me(@AuthenticationPrincipal Jwt jwt) { return profiles.me(current.require(jwt)); }
 
 	@PutMapping("/me")
 	ProfileDto updateMe(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateMe in) { return profiles.update(current.require(jwt), in); }
 
-	@PostMapping("/me/avatar/upload-url")
-	UploadUrl avatarUploadUrl(@AuthenticationPrincipal Jwt jwt) { return profiles.avatarUploadUrl(current.require(jwt)); }
-
-	@PutMapping("/me/avatar")
-	ProfileDto saveAvatar(@AuthenticationPrincipal Jwt jwt) { return profiles.saveAvatar(current.require(jwt)); }
+	@PostMapping(path = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	ProfileDto uploadAvatar(@AuthenticationPrincipal Jwt jwt, @RequestParam("file") MultipartFile file) { return profiles.uploadAvatar(current.require(jwt), file); }
 
 	@PostMapping("/me/foundation-request")
 	ProfileDto foundationRequest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody FoundationRequest in) {
@@ -94,8 +93,10 @@ public class ApiController {
 		return pets.changeStatus(current.require(jwt), id, in.status());
 	}
 
-	@PostMapping("/pets/{id}/photos/upload-url")
-	UploadUrl photoUploadUrl(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) { return pets.uploadUrl(current.require(jwt), id); }
+	@PostMapping(path = "/pets/{id}/photos/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	PhotoPath uploadPhoto(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestParam("file") MultipartFile file) {
+		return pets.uploadPhoto(current.require(jwt), id, file);
+	}
 
 	/** Whole gallery in order (first = cover); the app uses this instead of single add/delete. */
 	@PutMapping("/pets/{id}/photos")
