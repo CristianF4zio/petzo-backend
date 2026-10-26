@@ -22,7 +22,6 @@ const Pet = z.object({
   size: z.enum(["small", "medium", "large"]).describe("pequeño=small, mediano=medium, grande=large"),
   ageMonths: z.number().int().min(0).max(360).describe("Edad aproximada en meses (1 año = 12)"),
   description: z.string().describe("Descripción de la ficha"),
-  photoUrl: z.string().describe("Valor del atributo src de la imagen de la ficha"),
 });
 const Page = z.object({ pets: z.array(Pet).max(10) });
 
@@ -67,11 +66,15 @@ async function extract(slug) {
         await new Promise((r) => setTimeout(r, 1000 * i));
       }
     }
-    // Don't trust the model blindly: keep only complete entries and resolve photos against the page URL
+    // Photo URLs come from code, not the model: the accessibility snapshot it reads has the alt text but not the src.
+    // Each card's <img> is matched to the extracted pet by its heading.
+    const photos = await page.evaluate(() =>
+      Object.fromEntries([...document.querySelectorAll("#adopcion article")].map((a) => [a.querySelector("h2")?.textContent.trim(), a.querySelector("img")?.src])),
+    );
     const pets = data.pets
-      .filter((p) => p.name.trim() && p.photoUrl)
-      .map(({ photoUrl, ...p }) => ({ ...p, photoUrls: [new URL(photoUrl, url).href], sourceUrl: url }));
-    await log({ step: "extract", ms: Date.now() - startedAt, pets: pets.map((p) => `${p.name} (${p.species}, ${p.sex}, ${p.size}, ${p.ageMonths}m)`), tokens: { ...usage } });
+      .filter((p) => p.name.trim() && photos[p.name.trim()]) // only cards that really exist on the page, with their photo
+      .map((p) => ({ ...p, photoUrls: [photos[p.name.trim()]], sourceUrl: url }));
+    await log({ step: "extract", ms: Date.now() - startedAt, pets: pets.map((p) => `${p.name} (${p.species}, ${p.sex}, ${p.size}, ${p.ageMonths}m) ${p.photoUrls[0]}`), tokens: { ...usage } });
     return pets;
   } finally {
     if (stagehand) await stagehand.close();

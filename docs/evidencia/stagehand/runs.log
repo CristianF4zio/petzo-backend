@@ -6,3 +6,15 @@
 {"at":"2026-10-25T13:46:24.699Z","model":"google/gemini-2.5-flash","step":"screenshot","file":"evidencia/patas-del-avila-1792935981229.png"}
 {"at":"2026-10-25T13:46:27.731Z","model":"google/gemini-2.5-flash","step":"extract","ms":6502,"pets":["Luna (cat, female, small, 3m)","Toby (dog, male, medium, 14m)","Canela (dog, female, large, 24m)","Simón (cat, male, medium, 48m)"],"tokens":{"calls":2,"input":1299,"output":314}}
 {"at":"2026-10-25T13:46:32.270Z","model":"google/gemini-2.5-flash","step":"dry-run","found":4,"costUsd":0,"keyUsageUsd":0.001004}
+{"at":"2026-10-26T01:07:42.027Z","model":"openai/gpt-4.1-mini","step":"goto","url":"http://localhost:8090/demo/fundaciones/patas-del-avila.html"}
+{"at":"2026-10-26T01:07:42.259Z","model":"openai/gpt-4.1-mini","step":"screenshot","file":"evidencia/patas-del-avila-1792976858699.png"}
+{"at":"2026-10-26T01:07:45.612Z","model":"openai/gpt-4.1-mini","step":"extract","ms":6913,"pets":["Luna (cat, female, small, 3m)","Toby (dog, male, medium, 14m)","Canela (dog, female, large, 24m)","Simón (cat, male, medium, 48m)"],"tokens":{"calls":2,"input":1506,"output":239}}
+{"at":"2026-10-26T01:07:53.114Z","model":"openai/gpt-4.1-mini","step":"done","job":"9eecbbf4-4253-4dde-b8df-d06f6cfba66d","created":4,"costUsd":0,"keyUsageUsd":0.0023431}
+{"at":"2026-10-26T01:08:37.708Z","model":"openai/gpt-4.1-mini","step":"goto","url":"http://localhost:8090/demo/fundaciones/patas-del-avila.html"}
+{"at":"2026-10-26T01:08:37.917Z","model":"openai/gpt-4.1-mini","step":"screenshot","file":"evidencia/patas-del-avila-1792976915139.png"}
+{"at":"2026-10-26T01:08:41.336Z","model":"openai/gpt-4.1-mini","step":"extract","ms":6197,"pets":["Luna (cat, female, small, 3m) http://localhost:8090/demo/fundaciones/Luna","Toby (dog, male, medium, 14m) http://localhost:8090/demo/fundaciones/Toby","Canela (dog, female, large, 24m) http://localhost:8090/demo/fundaciones/Canela","Simón (cat, male, medium, 48m) http://localhost:8090/demo/fundaciones/Sim%C3%B3n"],"tokens":{"calls":2,"input":1506,"output":254}}
+{"at":"2026-10-26T01:08:46.967Z","model":"openai/gpt-4.1-mini","step":"dry-run","found":4,"costUsd":0.000985,"keyUsageUsd":0.0033279}
+{"at":"2026-10-26T01:09:15.705Z","model":"openai/gpt-4.1-mini","step":"goto","url":"http://localhost:8090/demo/fundaciones/patas-del-avila.html"}
+{"at":"2026-10-26T01:09:16.047Z","model":"openai/gpt-4.1-mini","step":"screenshot","file":"evidencia/patas-del-avila-1792976950949.png"}
+{"at":"2026-10-26T01:09:19.635Z","model":"openai/gpt-4.1-mini","step":"extract","ms":8686,"pets":["Luna (cat, female, small, 3m) http://localhost:8090/demo/img/luna.jpg","Toby (dog, male, medium, 14m) http://localhost:8090/demo/img/toby.jpg","Canela (dog, female, large, 24m) http://localhost:8090/demo/img/canela.jpg","Simón (cat, male, medium, 48m) http://localhost:8090/demo/img/simon.jpg"],"tokens":{"calls":2,"input":1449,"output":229}}
+{"at":"2026-10-26T01:09:24.458Z","model":"openai/gpt-4.1-mini","step":"dry-run","found":4,"costUsd":0.001009,"keyUsageUsd":0.0043367}
