@@ -10,7 +10,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] Proyecto Supabase propio y gratuito con BD, Storage y Auth en uso real (prueba de punta a punta del 25-oct)
 - [x] Correo y contraseña y Google, ambos por la API: correo probado contra Supabase real; Google probado el 25-oct en el panel y en el iPhone (Site URL de Supabase = la IP de la API en el wifi)
 - [x] Panel admin protegido por rol en el backend: 403 en vivo para usuarios normales y el admin entra con Google y lanza importaciones (25-oct)
-- [~] Dos flujos de n8n (moderación por OpenRouter, notificaciones por Gmail) listos y el túnel probado. Falta importarlos en staging, crear credenciales y ejecutarlos (Cris)
+- [~] Dos flujos de n8n en staging, activos y con webhook firmado (403 sin secreto). Flujo 1 (moderación por OpenRouter) probado de punta a punta el 25-oct: ejecución 417, ~7 s, riesgo 90 y razón de la IA. Falta la contraseña de aplicación de Gmail en la credencial SMTP para probar el flujo 2 (Cris)
 - [x] Stagehand: importación completa el 25-oct: el admin la lanza en el panel, el worker lee la página en Chrome real y la API crea 4 borradores con su foto en Storage (log y capturas en `docs/evidencia/stagehand/`). Se corrigió que el modelo no devolvía la URL de la foto: ahora la toma el código
 - [x] Skills y agentes registrados con qué se les encargó y cómo se comprobó (`docs/SKILLS_LOG.md`, `docs/AGENTS_LOG.md` en ambos repos)
 - [x] Modelo de Stagehand elegido y justificado con medición (`stagehand-worker/README.md`, D-11 del registro)
