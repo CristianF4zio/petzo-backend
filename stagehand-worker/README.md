@@ -51,3 +51,20 @@ Se eligió **gpt-4.1-mini**: mismo acierto, salida estructurada estricta (`json_
 **Con ventana vs. headless (26-oct-2026, versión anterior con solo `extract`):** el mismo resultado en ambos modos, 4/4 fichas con los mismos campos y fotos (1 449 tokens de entrada, 229–235 de salida). Con ventana el `extract` tardó 5,2 s y headless 9,6 s; la diferencia es de la llamada al modelo, no de la página. Costo por corrida ≈ $0.00095. Saldo usado en total: $0.0075 de $5.
 
 Evidencia: `docs/evidencia/stagehand/runs.log`, las capturas `patas-del-avila-*.png` (página real que vio el navegador) y `no-existe-*-fallo.png` (captura de una corrida fallida).
+
+## Flujo real · fundación ANAA (solo lectura)
+
+`npm run real` (con `HEADLESS=false` para ver el navegador) abre la página real de perros en adopción de **ANAA, Asociación Nacional Amigos de los Animales** (Madrid): https://www.anaaweb.org/perros-en-adopcion.
+
+- **Permiso:** su `robots.txt` dice `Allow: /` y declara `Content-Signal: ai-input=yes, use=reference`; sus términos no prohíben la lectura automatizada. No hay login ni CAPTCHA.
+- **Solo lectura:** no se envía nada a la API ni a Supabase. El reto pide datos inventados en el proyecto, así que las mascotas reales solo quedan en el log de evidencia. No se piden nombres de padrinos ni de personas (las fichas los muestran).
+- **Pasos:**
+  1. `goto` a la página y cookie de idioma `es_ES`.
+  2. **`observe`** "Selecciona Hembra en el filtro de sexo" → el código comprueba en el DOM que es el `<select>` de sexo. En una corrida propuso el de raza y fue rechazado; hay 1 reintento.
+  3. **`act`** y comprobación de estado: el valor quedó en `female`.
+  4. **`observe`** del botón "Buscar" → comprobado en el DOM → **`act`** → comprobación: todas las fichas visibles son hembras (42 de 114).
+  5. **`extract`** de 8 fichas, conservando solo los nombres que de verdad están visibles en la página.
+  6. Ficha individual abierta por su URL (paso conocido = código, mismo host) → **`extract`** de la descripción → comprobación de que la ficha es la del perro elegido.
+- **Mapeo a Petzo:** sexo, tamaño con la tabla del sitio (pequeño ≤ 12 kg, mediano ≤ 25 kg) y edad en meses desde la fecha de nacimiento.
+- **Resultado del 26-oct:** 4,9 s para leer las 8 fichas y unos 19 s la corrida entera; mismo resultado con ventana y headless; 6 llamadas al modelo (tope 10), unos 60 000 tokens de entrada (la página real es grande) y **≈ $0.025 por corrida**. Comprobé contra la captura: ALMAGREIRA DINA, hembra, 12,5 kg (mediano), nacida el 01/01/2023 (45 meses).
+- **Evidencia:** `docs/evidencia/stagehand-real/` (log con los intentos rechazados y capturas del listado filtrado y de la ficha).

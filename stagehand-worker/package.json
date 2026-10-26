@@ -4,7 +4,8 @@
   "scripts": {
     "start": "node worker.mjs",
     "once": "node worker.mjs once",
-    "dry": "node worker.mjs dry"
+    "dry": "node worker.mjs dry",
+    "real": "node real.mjs"
   },
   "type": "module",
   "dependencies": {

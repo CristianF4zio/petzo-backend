@@ -97,6 +97,7 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Límite:** la API solo descarga fotos de `IMPORT_ALLOWED_HOSTS` (protección SSRF).
 - **IA:** reescribió el worker con la guía v4 y lo corrió. **Yo:** validé contra la captura que los datos extraídos coinciden con la página.
 - **Evidencia:** `docs/evidencia/stagehand/` (log y capturas).
+- **26-oct · fundación real, solo lectura:** Cris pidió que Stagehand trabaje con una fundación real. Choca con la regla "usa solo datos inventados", así que Cris eligió **leer sin guardar**: `npm run real` abre la página de ANAA (Madrid), cuyo `robots.txt` permite todo y declara `ai-input=yes`. Filtra por hembras con `observe` → comprobación en el DOM → `act` (selector de sexo y botón Buscar), extrae 8 fichas y una ficha completa, y no escribe nada en la API ni en Supabase. Descartado: importarlas como borradores (datos reales en el proyecto y fotos de terceros) y las fundaciones venezolanas (publican en Instagram, cuyos términos prohíben el scraping). Errores que la verificación atajó: `observe` propuso el enlace de otro perro (todas las fichas dicen "Ver más detalles") y luego el selector de raza; el sitio respondía en inglés. Coste ≈ $0.025 por corrida. Evidencia: `docs/evidencia/stagehand-real/`.
 
 ### 11. Modelo y gasto de Stagehand — 25-oct-2026
 - **Problema:** hay que elegir el modelo con $5 sin recarga, midiendo en la tarea real y no por el nombre.
