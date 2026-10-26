@@ -1,0 +1,76 @@
+{
+  "nota": "Resumen de la ejecución exportado con la API pública de n8n (GET /api/v1/executions/{id}). Se omitieron headers, IPs y credenciales.",
+  "flujo": "Petzo 1 · Moderación",
+  "workflowId": "HXMbmyDDrUn1FlDG",
+  "execution": "417",
+  "status": "success",
+  "modo": "webhook",
+  "inicio": "2026-10-26T03:37:19.328Z",
+  "fin": "2026-10-26T03:37:26.144Z",
+  "nodos": [
+    {
+      "nodo": "Webhook",
+      "estado": "success",
+      "ms": 1
+    },
+    {
+      "nodo": "OpenRouter gpt-4.1-mini",
+      "estado": "success",
+      "ms": 4203
+    },
+    {
+      "nodo": "Parse result",
+      "estado": "success",
+      "ms": 1753
+    },
+    {
+      "nodo": "Petzo callback",
+      "estado": "success",
+      "ms": 786
+    }
+  ],
+  "entrada": {
+    "petId": "180cc9a2-eecd-4d6a-9f11-de2a3f9e783c",
+    "version": 2,
+    "nombre": "Canela demo n8n",
+    "fotos": 1
+  },
+  "ia": {
+    "modelo": "openai/gpt-4.1-mini",
+    "proveedor": "OpenAI",
+    "tokens": {
+      "prompt_tokens": 608,
+      "completion_tokens": 41,
+      "total_tokens": 649,
+      "cost": 0.0003088,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0003088,
+        "upstream_inference_prompt_cost": 0.0002432,
+        "upstream_inference_completions_cost": 0.0000656
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  "resultado": {
+    "petId": "180cc9a2-eecd-4d6a-9f11-de2a3f9e783c",
+    "riskScore": 90,
+    "reason": "La publicación contiene una foto de prueba y una descripción que indica un animal ficticio, lo que sugiere que no es una oferta real.",
+    "version": 2,
+    "inputTokens": 608,
+    "outputTokens": 41
+  },
+  "callback": {
+    "status": "pending_review"
+  }
+}

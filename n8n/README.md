@@ -39,4 +39,5 @@ cloudflared tunnel --no-autoupdate --url http://localhost:8090
 1. Activa ambos flujos y pon sus **Production URL** en `petzo-backend/.env` (`N8N_MODERATION_WEBHOOK_URL`, `N8N_NOTIFY_WEBHOOK_URL`); reinicia la API.
 2. **Flujo 1:** publica una mascota desde la app (o `PATCH /api/pets/{id}/status {"status":"pending_review"}`). En n8n → *Executions* verás la ejecución; la mascota pasa a `approved` (riesgo < 40) o queda en la cola del admin con el motivo.
 3. **Flujo 2:** aprobar/rechazar una mascota o una solicitud envía el correo; aparece en *Executions* y llega al buzón del dueño.
-4. Evidencia sin secretos: captura de *Executions* (sin abrir credenciales) y exporta cada flujo con **Download** (n8n no incluye credenciales en el JSON; revisa igual que no haya URLs privadas antes de subirlo).
+4. Evidencia ya guardada: `docs/evidencia/n8n/flujo1-moderacion-ejecucion-417.json` (resumen de la ejecución del flujo 1 exportado con `GET /api/v1/executions/417` de la API pública de n8n; se omitieron headers, IPs y credenciales).
+5. Evidencia sin secretos: captura de *Executions* (sin abrir credenciales) y exporta cada flujo con **Download** (n8n no incluye credenciales en el JSON; revisa igual que no haya URLs privadas antes de subirlo).

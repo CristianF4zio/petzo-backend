@@ -22,7 +22,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [~] URLs de los dos repos y commit final: borrador listo en `Desktop/petzo/ENTREGA.md`; falta poner el commit final al cerrar
 - [x] README desde cero en ambos repos (versiones, variables, Supabase, Google, arranque, usuario y admin de prueba, API, limitaciones). Probado el 26-oct con un clon limpio de GitHub: encontró y se corrigió un `npm ci` roto en la app
 - [ ] Video de 3–5 min (Cris)
-- [~] Enlaces y evidencia de ejecución de los 2 flujos de n8n: enlaces en `ENTREGA.md` y ejecución 417 del flujo 1. Faltan las capturas de *Executions* y la ejecución del flujo 2 (Cris: contraseña de Gmail)
+- [~] Enlaces y evidencia de ejecución de los 2 flujos de n8n: enlaces en `ENTREGA.md`; flujo 1 con su ejecución 417 exportada sin secretos en `docs/evidencia/n8n/`. Falta el flujo 2: necesita la credencial SMTP (Cris), y luego su captura
 - [x] Stagehand: ruta, comando, tarea, modelo y versión, resultado, log, captura y costo (`stagehand-worker/README.md`, `docs/evidencia/stagehand/`)
 - [x] Registro de decisiones `docs/DECISIONS.md`, enlazado desde ambos README
 

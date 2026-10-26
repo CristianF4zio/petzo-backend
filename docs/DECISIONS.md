@@ -76,7 +76,8 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Descartado:** deploy en Render (tarda en despertar, no es necesario para la demo local).
 - **Límite:** la URL del túnel cambia en cada arranque y hay que actualizarla en n8n; si n8n o la IA fallan, la publicación queda en revisión para el admin (RNF-08).
 - **IA:** adaptó los JSON, los importó en staging por la API pública de n8n (con mi API key solo en el entorno del proceso), creó las credenciales sin la contraseña de Gmail y actualiza la URL del túnel. **Yo:** entro a n8n, pego la contraseña de aplicación de Gmail en la credencial y reviso las ejecuciones.
-- **Evidencia:** `n8n/*.json`, `n8n/README.md`; flujo 1 ejecución 417 del 25-oct (≈7 s, riesgo 90 con razón de la IA: la mascota de prueba quedó en revisión, lo correcto para una ficha que se declara ficticia); webhooks sin el secreto responden 403; capturas de *Executions*.
+- **Evidencia:** `n8n/*.json`, `n8n/README.md`; flujo 1 ejecución 417 del 25-oct (≈7 s, riesgo 90 con razón de la IA: la mascota de prueba quedó en revisión, lo correcto para una ficha que se declara ficticia); webhooks sin el secreto responden 403; resumen limpio de la ejecución en `docs/evidencia/n8n/`; capturas de *Executions*.
+- **26-oct:** para el flujo 2 se intentó una cuenta SMTP de prueba (Ethereal) en vez del Gmail personal, para cumplir "cuentas de desarrollo"; crear cuentas externas quedó fuera de lo que la IA puede hacer sola, así que la credencial la configura Cris.
 
 ### 9. Toda la IA por OpenRouter — 25-oct-2026
 - **Problema:** el SPEC fijaba Claude Haiku 5.5 (D-16), pero la única clave disponible es la de OpenRouter con $5.
