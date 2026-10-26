@@ -26,6 +26,7 @@ public class StorageClient {
 		this.base = props.supabaseUrl() + "/storage/v1";
 		this.http = RestClient.builder()
 				.baseUrl(base)
+				.requestFactory(com.petzo.config.WebConfig.timeouts(java.time.Duration.ofSeconds(30)))
 				.defaultHeader("apikey", props.serviceRoleKey())
 				.defaultHeader("Authorization", "Bearer " + props.serviceRoleKey())
 				.build();

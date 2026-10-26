@@ -82,7 +82,7 @@ public final class Dtos {
 	public record ImportStatusInput(@NotNull ImportStatus status, @Size(max = 500) String error, long inputTokens, long outputTokens) {}
 
 	/** Identifier of the (demo) foundation site to import, e.g. patas-del-avila; the field keeps its original name. */
-	public record ImportInput(@NotBlank @Pattern(regexp = "@?[A-Za-z0-9._-]{1,40}") String instagramHandle) {}
+	public record ImportInput(@NotBlank @Pattern(regexp = "@?[a-z0-9-]{1,40}", message = "Usa el identificador de la página: minúsculas, números y guiones") String instagramHandle) {}
 
 	// Admin
 	public record RejectInput(@NotBlank @Size(max = 500) String reason) {}

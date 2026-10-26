@@ -57,6 +57,8 @@ public class GoogleFlow {
 	public String callback(String flow, String code, String error) {
 		Pending p = flows.get(flow);
 		if (p == null) return null;
+		// Browser reload of the callback: the code was already exchanged (verifier spent), just go back again
+		if (p.session() != null) return p.redirect();
 		if (code == null || error != null) {
 			flows.remove(flow);
 			return p.redirect() + "?error=" + (error == null ? "cancelled" : "google");

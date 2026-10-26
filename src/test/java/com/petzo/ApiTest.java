@@ -234,6 +234,13 @@ class ApiTest {
 		verify(storage).deleteAfterCommit(argThat(l -> l.size() == 1));
 		mvc.perform(get("/api/me/pets").with(as(owner))).andExpect(jsonPath("$[0].moderationReason").value("Fotos de internet"));
 
+		// pausing a reported pet must not dodge the takedown (it could be republished without moderation)
+		String dodged = publish(owner);
+		approve(dodged);
+		call(withJson(patch("/api/pets/" + dodged + "/status"), "{\"status\":\"paused\"}").with(as(owner)), 200);
+		mvc.perform(withJson(post("/api/admin/pets/" + dodged + "/reject"), "{\"reason\":\"Reportada\"}").with(as(boss)))
+				.andExpect(jsonPath("$.status").value("rejected"));
+
 		call(withJson(post("/api/me/foundation-request"), "{\"foundationName\":\"Patas del Ávila\",\"foundationInstagram\":\"@patas\"}").with(as(owner)), 200);
 		mvc.perform(get("/api/admin/foundations").with(as(boss))).andExpect(jsonPath("$[?(@.id=='" + owner + "')]").exists());
 		mvc.perform(post("/api/admin/foundations/" + owner + "/verify").with(as(boss))).andExpect(jsonPath("$.plan").value("pro"));

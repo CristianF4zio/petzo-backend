@@ -74,6 +74,8 @@ async function extract(slug) {
   const startedAt = Date.now();
   Object.assign(usage, { calls: 0, input: 0, output: 0, provider: null }); // per run, so the call cap and the token report are per job
   const browser = await localBrowser.launch({ headless: HEADLESS });
+  // The run timeout only rejects the promise: closing the browser stops this run from spending more model calls
+  const deadline = setTimeout(() => browser.close().catch(() => {}), MAX_RUN_MS);
   let stagehand;
   try {
     stagehand = await Stagehand.create({ browser, model: { generate } });
@@ -90,7 +92,7 @@ async function extract(slug) {
       if (!data?.length) throw Error("No encontró el botón");
       return data;
     });
-    if (action.method !== "click" || !/adopci/i.test(action.description ?? "")) throw Error(`Acción inesperada: ${action.method} · ${action.description}`);
+    if (action.method !== "click" || !/adop/i.test(action.description ?? "")) throw Error(`Acción inesperada: ${action.method} · ${action.description}`);
     await log({ step: "observe", action: `${action.method} · ${action.description}` });
     // Read-only click, never repeated: if act fails or times out, the page state decides whether it happened
     await stagehand.act(action).catch((e) => log({ step: "act", error: String(e).slice(0, 300) }));
@@ -121,6 +123,7 @@ async function extract(slug) {
     throw e;
   } finally {
     if (stagehand) await stagehand.close();
+    clearTimeout(deadline);
     await browser.close().catch(() => {});
   }
 }

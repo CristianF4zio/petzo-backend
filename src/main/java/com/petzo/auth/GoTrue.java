@@ -21,7 +21,8 @@ public class GoTrue {
 
 	public GoTrue(PetzoProperties props) {
 		this.base = props.supabaseUrl() + "/auth/v1";
-		this.http = RestClient.builder().baseUrl(base).defaultHeader("apikey", props.supabaseAnonKey()).build();
+		this.http = RestClient.builder().baseUrl(base).requestFactory(com.petzo.config.WebConfig.timeouts(java.time.Duration.ofSeconds(20)))
+				.defaultHeader("apikey", props.supabaseAnonKey()).build();
 	}
 
 	public Session signUp(String email, String password, String fullName) {

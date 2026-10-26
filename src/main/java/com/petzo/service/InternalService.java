@@ -150,7 +150,7 @@ public class InternalService {
 		ai.record("import", "import_job", jobId, in.inputTokens(), in.outputTokens(), json.valueToTree(Map.of("status", in.status(), "pets", job.petsCreated)));
 	}
 
-	// SSRF guard: only https images from Instagram's CDNs (no redirects elsewhere), read at most 5 MB
+	// SSRF guard: only images from IMPORT_ALLOWED_HOSTS (no redirects elsewhere), read at most 5 MB
 	private static String cut(String s, int max) { return s.substring(0, Math.min(max, s.length())); }
 
 	private Optional<byte[]> fetchImage(String url) {

@@ -58,6 +58,9 @@ class AuthTest {
 		// Supabase comes back with a code; the browser goes back to the app with no token in the URL
 		mvc.perform(get("/api/auth/google/callback?flow=" + flow + "&code=the-code")).andExpect(status().isFound())
 				.andExpect(header().string("Location", "exp://192.168.0.8:8081/--/auth-callback"));
+		// a reload of the callback goes back again instead of a 500 (the code was already exchanged)
+		mvc.perform(get("/api/auth/google/callback?flow=" + flow + "&code=the-code")).andExpect(status().isFound())
+				.andExpect(header().string("Location", "exp://192.168.0.8:8081/--/auth-callback"));
 
 		String claim = "{\"flow\":\"" + flow + "\",\"secret\":\"%s\"}";
 		mvc.perform(withJson(post("/api/auth/google/claim"), claim.formatted("wrong"))).andExpect(status().isUnauthorized());

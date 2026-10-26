@@ -5,8 +5,11 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -14,6 +17,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 public class WebConfig {
+
+	/** Deadline for every outbound call: a peer that accepts the connection and never answers must not hang a thread forever. */
+	public static JdkClientHttpRequestFactory timeouts(Duration read) {
+		var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+		factory.setReadTimeout(read);
+		return factory;
+	}
 
 	@Bean
 	OpenAPI openApi() {

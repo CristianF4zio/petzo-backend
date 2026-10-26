@@ -33,7 +33,8 @@ public class Events {
 	private final StorageClient storage;
 	private final JdbcTemplate jdbc;
 	private final AiService ai;
-	private final RestClient http = RestClient.create();
+	// n8n answers on receipt; without a deadline a stuck webhook would pin a common-pool thread forever
+	private final RestClient http = RestClient.builder().requestFactory(com.petzo.config.WebConfig.timeouts(java.time.Duration.ofSeconds(20))).build();
 
 	public Events(PetzoProperties props, StorageClient storage, JdbcTemplate jdbc, AiService ai) {
 		this.props = props;

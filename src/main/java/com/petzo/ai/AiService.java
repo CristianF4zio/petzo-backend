@@ -3,7 +3,6 @@ package com.petzo.ai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petzo.config.PetzoProperties;
-import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +10,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -34,11 +32,9 @@ public class AiService {
 		this.props = props;
 		this.jdbc = jdbc;
 		this.json = json;
-		var timeouts = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
-		timeouts.setReadTimeout(Duration.ofSeconds(30));
 		this.client = props.openrouterApiKey() == null || props.openrouterApiKey().isBlank()
 				? null
-				: RestClient.builder().baseUrl("https://openrouter.ai/api/v1").requestFactory(timeouts)
+				: RestClient.builder().baseUrl("https://openrouter.ai/api/v1").requestFactory(com.petzo.config.WebConfig.timeouts(Duration.ofSeconds(30)))
 						.defaultHeader("Authorization", "Bearer " + props.openrouterApiKey()).build();
 	}
 

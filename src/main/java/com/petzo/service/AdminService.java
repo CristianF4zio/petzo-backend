@@ -56,7 +56,8 @@ public class AdminService {
 	/** Rejected photos would stay public (bucket is public), so they are deleted (SPEC §15). */
 	public PetDto reject(UUID id, String reason) {
 		Pet pet = pets.findById(id).orElseThrow(ApiException::notFound);
-		if (pet.status != PetStatus.pending_review && pet.status != PetStatus.approved) throw ApiException.conflict("INVALID_STATUS", "No se puede rechazar en este estado");
+		// paused too: otherwise a reported pet could be paused to dodge the takedown and then republished without moderation
+		if (pet.status != PetStatus.pending_review && pet.status != PetStatus.approved && pet.status != PetStatus.paused) throw ApiException.conflict("INVALID_STATUS", "No se puede rechazar en este estado");
 		List<String> paths = pet.photos.stream().map(ph -> ph.storagePath).toList();
 		pet.status = PetStatus.rejected;
 		pet.moderationReason = reason.trim();

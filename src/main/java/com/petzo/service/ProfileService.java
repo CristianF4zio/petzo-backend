@@ -48,6 +48,8 @@ public class ProfileService {
 	}
 
 	// Same path on every upload (SPEC §15); the version param busts caches
+	// No transaction around the Storage call (same reason as PetService.uploadPhoto); saveAndFlush opens its own
+	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 	public ProfileDto uploadAvatar(Profile me, org.springframework.web.multipart.MultipartFile file) {
 		storage.upload(avatarPath(me), StorageClient.readJpeg(file), "image/jpeg");
 		me.avatarUrl = storage.publicUrl(avatarPath(me)) + "?v=" + System.currentTimeMillis();

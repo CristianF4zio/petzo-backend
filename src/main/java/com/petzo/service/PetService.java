@@ -121,6 +121,8 @@ public class PetService {
 	}
 
 	/** Stores one photo and returns its path; it joins the gallery only with PUT /photos (D-28). */
+	// No transaction: the app uploads up to 5 photos at once and each Storage call must not hold one of the 5 DB connections
+	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 	public PhotoPath uploadPhoto(Profile me, UUID id, org.springframework.web.multipart.MultipartFile file) {
 		Pet pet = editable(me, id);
 		// No count check here: a full gallery may upload a replacement before PUT /photos drops the old one (max 5 is enforced on save)

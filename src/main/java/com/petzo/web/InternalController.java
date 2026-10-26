@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/** For n8n and the Stagehand worker. Guarded by x-internal-secret (SecurityConfig.InternalSecretFilter). */
+/** For n8n and the Stagehand worker. Guarded by x-internal-secret (constant-time check in SecurityConfig). */
 @RestController
 @RequestMapping("/internal")
 public class InternalController {
