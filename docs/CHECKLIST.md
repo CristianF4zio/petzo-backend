@@ -6,7 +6,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] App React Native con flujo principal y manejo visible de errores y carga (`petzo-frontend/apps/mobile`); probada en iPhone (Expo Go) y en el emulador de Android (login por la API y catálogo)
 - [x] API REST en Spring Boot con validaciones, autorización por JWT y rol, y errores `ProblemDetail` (27 tests)
 - [x] Exactamente dos repos: `petzo-backend` y `petzo-frontend` (panel en `apps/admin`); `petzo-web` está archivado (la API de GitHub lo confirma: "Repository was archived", 26-oct)
-- [ ] Repos accesibles para quien evalúa: hoy son privados (GitHub responde 404 sin sesión). Cris los hace públicos (la IA no tiene permiso)
+- [x] Repos accesibles para quien evalúa: públicos desde el 26-oct (verificado con la API de GitHub sin sesión)
 - [x] App y panel consumen solo la API; solo el backend accede a Supabase (sin SDK en clientes; fotos por `/api/photos/**`)
 - [x] Proyecto Supabase propio y gratuito con BD, Storage y Auth en uso real (prueba de punta a punta del 25-oct)
 - [x] Correo y contraseña y Google, ambos por la API: correo probado contra Supabase real; Google probado el 25-oct en el panel y en el iPhone (Site URL de Supabase = la IP de la API en el wifi)
