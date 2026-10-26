@@ -74,6 +74,8 @@ public class GoTrue {
 			if (body.contains("user_already_exists") || body.contains("email_exists")) {
 				throw ApiException.conflict("EMAIL_TAKEN", "Ya existe una cuenta con ese correo");
 			}
+			if (body.contains("email_not_confirmed")) throw new ApiException(HttpStatus.FORBIDDEN, "CONFIRM_EMAIL", "Confirma tu correo antes de entrar");
+			if (body.contains("over_") && body.contains("rate_limit")) throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "Demasiados intentos; espera un momento");
 			if (body.contains("weak_password")) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "La contraseña es muy débil");
 			if (body.contains("refresh_token") || body.contains("flow_state")) throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "La sesión expiró; vuelve a entrar");
 			throw new ApiException(HttpStatus.BAD_GATEWAY, "AUTH_UNAVAILABLE", "No pudimos conectar con el servicio de autenticación");

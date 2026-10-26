@@ -56,7 +56,7 @@ POST {{api}}/api/me/foundation-request
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"foundationName": "Refugio Patas del Ávila", "foundationInstagram": "@patasdelavila", "foundationBio": "Rescatamos perros en Libertador"}
+{"foundationName": "Refugio Patas del Ávila", "foundationInstagram": "patas-del-avila", "foundationBio": "Rescatamos perros en Libertador"}
 
 ### Create pet (draft, respects plan limit; D-28)
 POST {{api}}/api/pets
@@ -170,7 +170,7 @@ POST {{api}}/api/admin/imports
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"instagramHandle": "@patasdelavila"}
+{"instagramHandle": "patas-del-avila"}
 
 ### Internal (n8n): moderation result
 POST {{api}}/internal/pets/{{petId}}/moderation-result

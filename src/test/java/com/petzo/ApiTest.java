@@ -240,6 +240,7 @@ class ApiTest {
 
 		String live = publish(owner);
 		approve(live);
+		call(withJson(put("/api/admin/users/" + boss + "/suspend"), "{\"suspended\":true}").with(as(boss)), 409); // admins can't be locked out
 		call(withJson(put("/api/admin/users/" + owner + "/suspend"), "{\"suspended\":true}").with(as(boss)), 200);
 		mvc.perform(get("/api/me").with(as(owner))).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("SUSPENDED"));
 		call(get("/api/pets/" + live), 404);

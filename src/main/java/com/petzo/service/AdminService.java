@@ -88,6 +88,8 @@ public class AdminService {
 
 	public ProfileDto suspend(UUID userId, boolean suspended) {
 		Profile p = profiles.findById(userId).orElseThrow(ApiException::notFound);
+		// One misclick on your own row would lock you out of the panel
+		if (suspended && p.role == com.petzo.domain.Types.Role.admin) throw ApiException.conflict("ADMIN_PROTECTED", "No se puede suspender a un administrador");
 		p.suspended = suspended;
 		return ProfileService.toDto(profiles.saveAndFlush(p), storage);
 	}

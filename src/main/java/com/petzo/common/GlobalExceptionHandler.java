@@ -57,7 +57,13 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	ProblemDetail unexpected(Exception e) throws Exception {
-		if (e instanceof org.springframework.web.ErrorResponse || e instanceof org.springframework.security.access.AccessDeniedException) throw e;
+		if (e instanceof org.springframework.security.access.AccessDeniedException) throw e;
+		// Spring's own 4xx (405, 415, missing parameter, oversized upload…): same ProblemDetail shape, with a code
+		if (e instanceof org.springframework.web.ErrorResponse er) {
+			ProblemDetail p = er.getBody();
+			p.setProperty("code", HttpStatus.valueOf(p.getStatus()).name());
+			return p;
+		}
 		log.error("Unexpected error", e);
 		return problem(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL", "Error interno");
 	}

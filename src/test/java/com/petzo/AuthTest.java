@@ -52,6 +52,7 @@ class AuthTest {
 		String start = "/api/auth/google/start?flow=" + flow + "&challenge=" + challenge(secret) + "&redirect=";
 
 		mvc.perform(get(start + "https://evil.test/steal")).andExpect(status().isUnprocessableEntity()); // no open redirect
+		mvc.perform(get(start + "http://localhost:5173@evil.test/")).andExpect(status().isUnprocessableEntity()); // prefix must end at a boundary
 		mvc.perform(get(start + "exp://192.168.0.8:8081/--/auth-callback")).andExpect(status().isFound())
 				.andExpect(header().string("Location", "https://supabase.test/auth/v1/authorize?provider=google"));
 		// Supabase comes back with a code; the browser goes back to the app with no token in the URL

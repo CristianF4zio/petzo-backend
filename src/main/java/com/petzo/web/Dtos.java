@@ -22,7 +22,7 @@ public final class Dtos {
 	public record UpdateMe(@NotBlank @Size(min = 2, max = 80) String fullName, @NotBlank String whatsapp, @NotNull Short municipalityId) {}
 
 	public record FoundationRequest(@NotBlank @Size(min = 2, max = 80) String foundationName,
-			@NotBlank @Pattern(regexp = "@?[A-Za-z0-9._]{1,30}", message = "Usuario de Instagram inválido") String foundationInstagram,
+			@NotBlank @Pattern(regexp = "@?[A-Za-z0-9._-]{1,40}", message = "Usuario de Instagram inválido") String foundationInstagram,
 			@Size(max = 500) String foundationBio) {}
 
 	public record PublisherDto(UUID id, String name, String avatarUrl, Short municipalityId, boolean foundation, boolean verified, Long petsCount) {}

@@ -36,11 +36,17 @@ public class GoogleFlow {
 		this.props = props;
 	}
 
+	// The prefix must end at a boundary: "http://localhost:5173@evil.test" starts with "http://localhost:5173" but goes elsewhere
+	static boolean allowed(String redirect, String prefix) {
+		if (!redirect.startsWith(prefix)) return false;
+		return redirect.length() == prefix.length() || prefix.endsWith("/") || "/?#".indexOf(redirect.charAt(prefix.length())) >= 0;
+	}
+
 	/** Returns the Supabase authorize URL; {@code callbackUrl} is this API's own callback for this flow. */
 	public String start(String flow, String challenge, String redirect, String callbackUrl) {
 		if (!flow.matches("[0-9a-fA-F-]{36}") || !challenge.matches("[A-Za-z0-9_-]{43}")) throw invalid("Solicitud de inicio de sesión inválida");
 		// Only known return targets: otherwise this endpoint would be an open redirect
-		if (props.authRedirectAllowlist().stream().noneMatch(redirect::startsWith)) throw invalid("Destino de regreso no permitido");
+		if (props.authRedirectAllowlist().stream().noneMatch(prefix -> allowed(redirect, prefix))) throw invalid("Destino de regreso no permitido");
 		flows.entrySet().removeIf(e -> e.getValue().createdAt().isBefore(Instant.now().minus(TTL)));
 		String verifier = random();
 		if (flows.putIfAbsent(flow, new Pending(challenge, redirect, verifier, Instant.now(), null)) != null) throw invalid("Ese inicio de sesión ya existe");
