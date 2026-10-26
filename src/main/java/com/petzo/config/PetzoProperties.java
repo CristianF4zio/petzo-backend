@@ -15,4 +15,5 @@ public record PetzoProperties(
 		String n8nModerationUrl,
 		String n8nNotifyUrl,
 		List<String> authRedirectAllowlist,
-		List<String> importAllowedHosts) {}
+		List<String> importAllowedHosts,
+		List<String> importAutoHandles) {}

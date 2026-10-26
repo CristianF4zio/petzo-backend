@@ -55,6 +55,7 @@ Copia `.env.example` a `.env` (está en `.gitignore`) y completa los valores. Ni
 | `N8N_MODERATION_WEBHOOK_URL`, `N8N_NOTIFY_WEBHOOK_URL` | Production URL de los dos flujos |
 | `AUTH_REDIRECT_ALLOWLIST` | A dónde puede volver el navegador tras Google (`exp://`, `petzo://`, `http://localhost:5173`) |
 | `IMPORT_ALLOWED_HOSTS` | Hosts desde los que la importación puede bajar fotos (`localhost`) |
+| `IMPORT_AUTO_HANDLES`, `IMPORT_CRON` | Importación automática: páginas a leer y cuándo (cron de Spring, hora de Caracas). Recomendado `0 0 6 * * *` (diario 06:00); `-` la apaga |
 | `PORT` | `8090` |
 
 ## 3. Arrancar

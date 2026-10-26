@@ -23,6 +23,8 @@ public final class Repos {
 		List<Profile> findByVerificationStatusOrderByUpdatedAtDesc(Types.VerificationStatus status);
 
 		java.util.Optional<Profile> findFirstByFoundationInstagramIgnoreCaseAndVerificationStatus(String handle, Types.VerificationStatus status);
+
+		java.util.Optional<Profile> findFirstByRole(Types.Role role);
 	}
 
 	public interface PetRepo extends JpaRepository<Pet, UUID>, JpaSpecificationExecutor<Pet> {
@@ -31,6 +33,8 @@ public final class Repos {
 		List<Pet> findByStatusOrderByCreatedAt(PetStatus status);
 
 		long countByOwnerIdAndStatusIn(UUID ownerId, Collection<PetStatus> statuses);
+
+		boolean existsByOwnerIdAndSourceUrlAndNameIgnoreCase(UUID ownerId, String sourceUrl, String name);
 
 		long countByOwnerIdAndStatus(UUID ownerId, PetStatus status);
 
@@ -44,6 +48,8 @@ public final class Repos {
 
 	public interface ImportJobRepo extends JpaRepository<Simple.ImportJob, UUID> {
 		List<Simple.ImportJob> findTop50ByOrderByCreatedAtDesc();
+
+		boolean existsByInstagramHandleAndStatusIn(String handle, Collection<Types.ImportStatus> statuses);
 	}
 
 	public interface LifestyleRepo extends JpaRepository<Simple.LifestyleProfile, UUID> {}

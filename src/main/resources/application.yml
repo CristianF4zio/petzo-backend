@@ -57,3 +57,6 @@ petzo:
   auth-redirect-allowlist: ${AUTH_REDIRECT_ALLOWLIST:exp://,petzo://,http://localhost:5173}
   # Hosts the import may download photos from (the demo foundation site the Stagehand worker reads)
   import-allowed-hosts: ${IMPORT_ALLOWED_HOSTS:localhost}
+  # Automatic imports: foundation pages to read and when (Spring cron, Caracas time). Daily at 06:00 by default; "-" turns it off
+  import-auto-handles: ${IMPORT_AUTO_HANDLES:patas-del-avila}
+  import-cron: ${IMPORT_CRON:0 0 6 * * *}

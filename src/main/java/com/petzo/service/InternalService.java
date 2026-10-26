@@ -89,6 +89,27 @@ public class InternalService {
 	@Transactional(readOnly = true)
 	public List<ImportJob> imports() { return jobs.findTop50ByOrderByCreatedAtDesc(); }
 
+	/**
+	 * Queues one import per configured foundation page on a schedule (IMPORT_CRON, Caracas time); the worker picks it up.
+	 * Skips a page that already has a job queued or running, so a slow run is never doubled.
+	 */
+	@org.springframework.scheduling.annotation.Scheduled(cron = "${petzo.import-cron}", zone = "America/Caracas")
+	public int scheduleImports() {
+		Profile admin = profiles.findFirstByRole(Role.admin).orElse(null);
+		if (admin == null) {
+			log.warn("scheduled import skipped: no admin to own the drafts");
+			return 0;
+		}
+		int queued = 0;
+		for (String handle : props.importAutoHandles() == null ? List.<String>of() : props.importAutoHandles()) {
+			if (handle.isBlank() || jobs.existsByInstagramHandleAndStatusIn(handle, List.of(ImportStatus.queued, ImportStatus.running))) continue;
+			createImport(admin, handle);
+			queued++;
+		}
+		if (queued > 0) log.info("scheduled imports queued: {}", queued);
+		return queued;
+	}
+
 	/** Atomic claim: two workers never get the same job. */
 	public Optional<Map<String, Object>> claimNext() {
 		return jdbc.query("""
@@ -110,10 +131,14 @@ public class InternalService {
 				.orElseGet(() -> profiles.findById(job.requestedBy).orElseThrow());
 		int created = 0;
 		for (ImportedPet ip : in.pets()) {
+			String name = ip.name() == null || ip.name().isBlank() ? "Sin nombre" : cut(ip.name().trim(), 60);
+			String sourceUrl = ip.sourceUrl() == null ? null : cut(ip.sourceUrl(), 500);
+			// Scheduled imports read the same page again and again: a pet already imported from it is not created twice
+			if (sourceUrl != null && pets.existsByOwnerIdAndSourceUrlAndNameIgnoreCase(owner.id, sourceUrl, name)) continue;
 			Pet pet = new Pet();
 			pet.owner = owner;
 			pet.species = ip.species() == null ? Species.dog : ip.species();
-			pet.name = ip.name() == null || ip.name().isBlank() ? "Sin nombre" : cut(ip.name().trim(), 60);
+			pet.name = name;
 			pet.ageMonths = ip.ageMonths() == null ? null : (short) Math.clamp(ip.ageMonths(), 0, 360);
 			pet.sex = ip.sex() == null ? Sex.female : ip.sex();
 			pet.size = ip.size() == null ? Size.medium : ip.size();
@@ -121,7 +146,7 @@ public class InternalService {
 			pet.description = ip.description() == null ? null : cut(ip.description(), 1000);
 			pet.status = PetStatus.draft;
 			pet.source = PetSource.instagram;
-			pet.sourceUrl = ip.sourceUrl() == null ? null : cut(ip.sourceUrl(), 500);
+			pet.sourceUrl = sourceUrl;
 			Pet saved = pets.save(pet);
 			for (String url : ip.photoUrls().stream().limit(5).toList()) {
 				fetchImage(url).ifPresent(bytes -> {

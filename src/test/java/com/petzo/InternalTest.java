@@ -33,6 +33,7 @@ class InternalTest {
 	@Autowired MockMvc mvc;
 	@Autowired JdbcTemplate jdbc;
 	@Autowired ObjectMapper json;
+	@Autowired com.petzo.service.InternalService internal;
 	@MockitoBean StorageClient storage;
 	@MockitoSpyBean Events events;
 
@@ -137,11 +138,29 @@ class InternalTest {
 		mvc.perform(withJson(post("/internal/imports/" + job + "/status"), "{\"status\":\"done\",\"inputTokens\":50000,\"outputTokens\":2000}").header("x-internal-secret", SECRET))
 				.andExpect(status().isNoContent());
 		mvc.perform(get("/api/admin/imports").with(as(admin))).andExpect(jsonPath("$[?(@.id=='" + job + "')].petsCreated").value(1));
+
+		// a later run of the same page (e.g. the scheduled one) does not create the same pet again
+		String again = json.readTree(mvc.perform(withJson(post("/api/admin/imports"), "{\"instagramHandle\":\"" + handle + "\"}").with(as(admin)))
+				.andReturn().getResponse().getContentAsString()).get("id").asText();
+		mvc.perform(get("/internal/imports/next").header("x-internal-secret", SECRET)).andExpect(jsonPath("$.id").value(again));
+		mvc.perform(withJson(post("/internal/imports/" + again + "/pets"),
+				"{\"pets\":[{\"name\":\"canela\",\"species\":\"dog\",\"photoUrls\":[],\"sourceUrl\":\"https://instagram.com/p/1\"}]}")
+				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.created").value(0));
+		jdbc.update("update import_jobs set status = 'done' where id = ?::uuid", again);
 		String draft = json.readTree(mvc.perform(get("/api/me/pets").with(as(admin))).andExpect(jsonPath("$[0].status").value("draft"))
 				.andExpect(jsonPath("$[0].source").value("instagram")).andReturn().getResponse().getContentAsString()).get(0).get("id").asText();
 		verify(storage, never()).upload(anyString(), any(), anyString()); // non-Instagram URL rejected (SSRF guard)
 		mvc.perform(delete("/api/pets/" + draft).with(as(plain))).andExpect(status().isNotFound());
 		mvc.perform(delete("/api/pets/" + draft).with(as(admin))).andExpect(status().isNoContent());
 		mvc.perform(get("/api/pets/" + draft).with(as(admin))).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void scheduledImportQueuesOnceWhilePending() {
+		user(true); // an admin owns the drafts
+		jdbc.update("update import_jobs set status = 'done' where status in ('queued', 'running')");
+		org.junit.jupiter.api.Assertions.assertEquals(1, internal.scheduleImports()); // IMPORT_AUTO_HANDLES default: patas-del-avila
+		org.junit.jupiter.api.Assertions.assertEquals(0, internal.scheduleImports()); // still queued: not doubled
+		jdbc.update("update import_jobs set status = 'done' where status = 'queued'"); // leave no job for other tests' /next
 	}
 }

@@ -20,7 +20,9 @@ npm run once                     # procesa 1 trabajo en cola y termina
 npm start                        # consulta /internal/imports/next cada 10 s
 ```
 
-Para encolar un trabajo: panel admin → **Importaciones** → identificador `patas-del-avila` (o `POST /api/admin/imports {"instagramHandle":"patas-del-avila"}` con un token de admin). `HEADLESS=false` muestra la ventana del navegador.
+**Importación automática (26-oct):** la API encola sola un trabajo por cada página de `IMPORT_AUTO_HANDLES` según `IMPORT_CRON` (hora de Caracas). Recomendado: **una vez al día** (`0 0 6 * * *`, 06:00), porque una fundación actualiza su catálogo pocas veces al día y cada corrida gasta saldo. Para la demo se usa `0 */5 * * * *` (cada 5 min). No encola si ya hay un trabajo en cola o en curso para esa página, y al guardar se saltan las mascotas que ya se importaron de la misma página (mismo nombre y URL), así que repetir no duplica. Probado el 26-oct: la corrida de las 12:35 creó 4 borradores y la de las 12:40 creó 0 (`docs/evidencia/stagehand/api-schedule.log` y `runs.log`). El worker solo tiene que estar corriendo (`npm start`).
+
+Para encolar un trabajo a mano: panel admin → **Importaciones** → identificador `patas-del-avila` (o `POST /api/admin/imports {"instagramHandle":"patas-del-avila"}` con un token de admin). `HEADLESS=false` muestra la ventana del navegador.
 
 ## Cómo cuida el saldo y evita errores
 
