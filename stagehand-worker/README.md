@@ -28,7 +28,7 @@ Para encolar un trabajo: panel admin → **Importaciones** → identificador `pa
 - Límites: 120 s por corrida, 2 intentos de `extract` (solo lectura) con espera creciente, sin bucles que consulten al modelo. El cliente corta cada llamada a 30 s y no reintenta.
 - Antes de cada trabajo lee el saldo con `GET https://openrouter.ai/api/v1/key` (la clave nunca se imprime) y se detiene si quedan menos de $0.25.
 - Valida lo que devuelve el modelo: descarta fichas sin nombre o sin foto y resuelve las URLs de foto contra la página. La API vuelve a validar y solo descarga fotos de los hosts de `IMPORT_ALLOWED_HOSTS`.
-- Cada paso queda en `evidencia/runs.log` (hora, URL, paso, modelo, duración, tokens, resultado). La carpeta `evidencia/` está fuera de git; la evidencia limpia de la entrega está en `../docs/evidencia/stagehand/`.
+- Cada paso queda en `evidencia/runs.log` (hora, URL, paso, modelo, proveedor que eligió OpenRouter, modo headless, duración, tokens, resultado). Si algo falla se guarda una captura `*-fallo.png` de la página en ese momento y el error en el log (probado con una página inexistente: `npm run dry -- no-existe` corta a los 10 s esperando las fichas, sin llamar al modelo). La carpeta `evidencia/` está fuera de git; la evidencia limpia de la entrega está en `../docs/evidencia/stagehand/`.
 
 ## Elección del modelo (25-oct-2026, misma página, `npm run dry`)
 
@@ -39,4 +39,8 @@ Para encolar un trabajo: panel admin → **Importaciones** → identificador `pa
 
 Se eligió **gpt-4.1-mini**: mismo acierto, salida estructurada estricta (`json_schema`) sin tokens de razonamiento y menor costo por corrida en esta tarea, que es de salida corta. Claude Haiku 4.5 ($1.00 / $5.00) no se probó: costaría unas 3 veces más sin una falla que lo justifique. Saldo tras las pruebas: $4.998996 de $5.
 
-Evidencia: `docs/evidencia/stagehand/runs.log` y las capturas `patas-del-avila-*.png` (página real que vio el navegador).
+**Proveedor:** OpenRouter enruta `openai/gpt-4.1-mini` a **OpenAI** (campo `provider` de la respuesta, registrado en el log desde el 26-oct).
+
+**Con ventana vs. headless (26-oct-2026):** el mismo resultado en ambos modos, 4/4 fichas con los mismos campos y fotos (1 449 tokens de entrada, 229–235 de salida). Con ventana el `extract` tardó 5,2 s y headless 9,6 s; la diferencia es de la llamada al modelo, no de la página. Costo por corrida ≈ $0.00095. Saldo usado en total: $0.0075 de $5.
+
+Evidencia: `docs/evidencia/stagehand/runs.log`, las capturas `patas-del-avila-*.png` (página real que vio el navegador) y `no-existe-*-fallo.png` (captura de una corrida fallida).

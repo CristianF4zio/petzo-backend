@@ -13,8 +13,8 @@ const client = new OpenAI({
   maxRetries: 0,
 });
 
-// Tokens of this process, so each run can report what it spent
-export const usage = { calls: 0, input: 0, output: 0 };
+// Tokens of this process, so each run can report what it spent, and the provider OpenRouter routed to
+export const usage = { calls: 0, input: 0, output: 0, provider: null };
 
 export async function generate(params) {
   const f = params.responseFormat;
@@ -35,6 +35,7 @@ export async function generate(params) {
   usage.calls += 1;
   usage.input += r.usage?.prompt_tokens ?? 0;
   usage.output += r.usage?.completion_tokens ?? 0;
+  usage.provider = r.provider ?? usage.provider;
   const text = r.choices[0]?.message.content;
   if (!text) throw Error("El modelo no devolvió contenido");
   return { role: "assistant", content: { type: "text", text }, outputFormat: "json_schema", structuredContent: JSON.parse(text) };

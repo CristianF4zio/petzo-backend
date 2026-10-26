@@ -26,7 +26,7 @@ const Pet = z.object({
 const Page = z.object({ pets: z.array(Pet).max(10) });
 
 const log = async (entry) => {
-  const line = JSON.stringify({ at: new Date().toISOString(), model: process.env.OPENROUTER_MODEL, ...entry });
+  const line = JSON.stringify({ at: new Date().toISOString(), model: process.env.OPENROUTER_MODEL, headless: HEADLESS, ...entry });
   console.log(line);
   await appendFile("evidencia/runs.log", line + "\n");
 };
@@ -76,6 +76,15 @@ async function extract(slug) {
       .map((p) => ({ ...p, photoUrls: [photos[p.name.trim()]], sourceUrl: url }));
     await log({ step: "extract", ms: Date.now() - startedAt, pets: pets.map((p) => `${p.name} (${p.species}, ${p.sex}, ${p.size}, ${p.ageMonths}m) ${p.photoUrls[0]}`), tokens: { ...usage } });
     return pets;
+  } catch (e) {
+    // Capture the page as it was when it failed (the "before" one is taken after the wait)
+    try {
+      const [page] = await browser.context.pages();
+      const file = `evidencia/${slug}-${startedAt}-fallo.png`;
+      await page?.screenshot({ path: file });
+      await log({ step: "error-screenshot", url, file, error: String(e).slice(0, 300) });
+    } catch {}
+    throw e;
   } finally {
     if (stagehand) await stagehand.close();
     await browser.close().catch(() => {});
