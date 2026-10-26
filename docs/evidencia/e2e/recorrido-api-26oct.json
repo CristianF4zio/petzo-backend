@@ -1,0 +1,148 @@
+{
+  "fecha": "2026-10-26T14:32:15.698Z",
+  "resultado": "OK",
+  "nota": "Usuarios @example.com ficticios; sin tokens ni números en este archivo.",
+  "pasos": [
+    {
+      "step": "Registro de A (publica)",
+      "request": "POST /api/auth/register",
+      "status": 201,
+      "ms": 1101
+    },
+    {
+      "step": "Registro de B (adopta)",
+      "request": "POST /api/auth/register",
+      "status": 201,
+      "ms": 1400
+    },
+    {
+      "step": "Login de A por correo",
+      "request": "POST /api/auth/login",
+      "status": 200,
+      "ms": 1651
+    },
+    {
+      "step": "Perfil de A",
+      "request": "PUT /api/me",
+      "status": 200,
+      "ms": 3956
+    },
+    {
+      "step": "Perfil de B",
+      "request": "PUT /api/me",
+      "status": 200,
+      "ms": 4378
+    },
+    {
+      "step": "A crea la mascota (borrador)",
+      "request": "POST /api/pets",
+      "status": 201,
+      "ms": 5590
+    },
+    {
+      "step": "A sube la foto a Storage (por la API)",
+      "request": "POST /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/photos/upload",
+      "status": 200,
+      "ms": 7842
+    },
+    {
+      "step": "A guarda la galería",
+      "request": "PUT /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/photos",
+      "status": 200,
+      "ms": 8899
+    },
+    {
+      "step": "A envía a revisión",
+      "request": "PATCH /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/status",
+      "status": 200,
+      "ms": 9837
+    },
+    {
+      "step": "A ve su publicación tras la moderación de n8n",
+      "request": "GET /api/me/pets",
+      "status": 200,
+      "ms": 18655,
+      "result": {
+        "status": "pending_review",
+        "riskScore": null,
+        "reason": null
+      }
+    },
+    {
+      "step": "Aprobación por el callback interno (simula n8n)",
+      "request": "POST /internal/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/moderation-result",
+      "status": 200,
+      "ms": 19364
+    },
+    {
+      "step": "B ve la mascota en el catálogo público",
+      "request": "GET /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5",
+      "status": 200,
+      "ms": 19696,
+      "result": {
+        "status": "approved",
+        "photos": 1,
+        "whatsappHidden": true
+      }
+    },
+    {
+      "step": "B la marca como favorita",
+      "request": "POST /api/favorites/1de64b83-62c3-40b9-a946-51c2e0efbda5",
+      "status": 204,
+      "ms": 20690
+    },
+    {
+      "step": "B envía la solicitud",
+      "request": "POST /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/requests",
+      "status": 201,
+      "ms": 21754
+    },
+    {
+      "step": "B ve su solicitud pendiente",
+      "request": "GET /api/me/requests",
+      "status": 200,
+      "ms": 22463
+    },
+    {
+      "step": "A ve las solicitudes de su mascota",
+      "request": "GET /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/requests",
+      "status": 200,
+      "ms": 22932,
+      "result": {
+        "count": 1,
+        "status": "pending"
+      }
+    },
+    {
+      "step": "B intenta ver el WhatsApp antes de aprobar (debe fallar)",
+      "request": "GET /api/requests/3bf975ef-2c00-435f-af61-7ed6fca7baae/contact",
+      "status": 409,
+      "ms": 23251,
+      "result": "bloqueado, como debe ser"
+    },
+    {
+      "step": "A aprueba la solicitud",
+      "request": "POST /api/requests/3bf975ef-2c00-435f-af61-7ed6fca7baae/approve",
+      "status": 200,
+      "ms": 23779
+    },
+    {
+      "step": "B obtiene el contacto por WhatsApp",
+      "request": "GET /api/requests/3bf975ef-2c00-435f-af61-7ed6fca7baae/contact",
+      "status": 200,
+      "ms": 24091,
+      "result": {
+        "whatsappLink": [
+          "name",
+          "whatsapp"
+        ]
+      }
+    },
+    {
+      "step": "A pausa la mascota de prueba (sale del catálogo)",
+      "request": "PATCH /api/pets/1de64b83-62c3-40b9-a946-51c2e0efbda5/status",
+      "status": 200,
+      "ms": 24560
+    }
+  ]
+}
