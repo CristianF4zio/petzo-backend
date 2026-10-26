@@ -33,3 +33,7 @@ build/
 .vscode/
 
 .env
+
+# local env variants (.env.local, .env.production…); only the example is versioned
+.env*
+!.env.example

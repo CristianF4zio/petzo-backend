@@ -2,3 +2,7 @@ node_modules
 .env
 browser-data
 evidencia/
+
+# local env variants (.env.local, .env.production…); only the example is versioned
+.env*
+!.env.example
