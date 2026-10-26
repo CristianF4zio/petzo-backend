@@ -70,8 +70,8 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Por qué:** todo sigue local; el túnel no requiere cuenta ni deploy.
 - **Descartado:** deploy en Render (tarda en despertar, no es necesario para la demo local).
 - **Límite:** la URL del túnel cambia en cada arranque y hay que actualizarla en n8n; si n8n o la IA fallan, la publicación queda en revisión para el admin (RNF-08).
-- **IA:** adaptó los JSON y la guía de importación. **Yo:** importo los flujos en staging, creo las credenciales y dejo la evidencia de ejecución.
-- **Evidencia:** `n8n/*.json`, `n8n/README.md`, capturas de *Executions*.
+- **IA:** adaptó los JSON, los importó en staging por la API pública de n8n (con mi API key solo en el entorno del proceso), creó las credenciales sin la contraseña de Gmail y actualiza la URL del túnel. **Yo:** entro a n8n, pego la contraseña de aplicación de Gmail en la credencial y reviso las ejecuciones.
+- **Evidencia:** `n8n/*.json`, `n8n/README.md`; flujo 1 ejecución 417 del 25-oct (≈7 s, riesgo 90 con razón de la IA: la mascota de prueba quedó en revisión, lo correcto para una ficha que se declara ficticia); webhooks sin el secreto responden 403; capturas de *Executions*.
 
 ### 9. Toda la IA por OpenRouter — 25-oct-2026
 - **Problema:** el SPEC fijaba Claude Haiku 5.5 (D-16), pero la única clave disponible es la de OpenRouter con $5.
@@ -96,6 +96,7 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Descartado:** Gemini 2.5 Flash (≈ $0.0012, más caro por salida) y Claude Haiku 4.5 (~3× más caro, sin falla que lo justifique).
 - **Límite:** tope de $0.25 por corrida, 120 s por trabajo, 2 intentos de lectura.
 - **Evidencia:** tabla en `stagehand-worker/README.md`; saldo $4.998996 de $5 tras las pruebas.
+- **26-oct:** se comparó con ventana y headless (mismo 4/4 y mismos campos); el log guarda el proveedor (OpenAI), el modo y una captura `*-fallo.png` cuando algo falla, como pide la guía. Gasto total de la clave: $0.0075.
 
 ### 12. Publicación como borrador y galería en un solo paso — 22-oct-2026 (D-28)
 - **Problema:** subir fotos de a una dejaba mascotas atascadas en revisión y moderaba N veces.
@@ -107,3 +108,10 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Recortes:** cobro del plan Pro, chat, mascotas perdidas y APK de tiendas (v2). El visitante sin cuenta no está: la app pide sesión para todo.
 - **Cambios de rumbo:** API en Node → Spring Boot (stack del reto); tres repos → dos; SDK de Supabase en la app → todo por la API; Instagram → página demo; Anthropic → OpenRouter.
 - **Errores encontrados en pruebas reales:** la Bienvenida no aparecía en el iPhone (faltaba `redirectTo` en Expo Router 58); la IA podía deshacer la aprobación del dueño (guardaba la entidad entera); editar dejaba la mascota en revisión para siempre (versión subida sin moderar). Los tres se corrigieron con tests.
+
+### 14. Auditoría final — 26-oct-2026
+- **Problema:** antes de entregar hay que revisar seguridad y lo que puede romper la demo, sin rehacer nada.
+- **Decisión:** dos subagentes auditaron los repos en paralelo (`ponytail-audit`, solo lectura). Las reglas del reto se cumplen (403 en admin, secreto en `/internal`, sin secretos en git ni en evidencia, exportaciones de n8n sin credenciales). Corregí lo pequeño y seguro: la lista de destinos de Google aceptaba `http://localhost:5173@evil.test` (ahora el prefijo debe terminar en `/`, `?` o `#`, con test); un admin podía suspenderse a sí mismo (409, con test); los 405/415 de Spring no salían como `ProblemDetail`; "correo sin confirmar" y el límite de intentos se mostraban como "servicio caído"; el usuario de fundación no admitía `-` y por eso los borradores importados de `patas-del-avila` nunca llegaban a la fundación; en la app, pantalla en blanco si la API no responde al abrir, y un refresh en curso podía deshacer el cierre de sesión; en el panel, "Retirar" fallaba en el segundo reporte de la misma mascota.
+- **Descartado (queda como limitación conocida):** amarrar el `claim` de Google a un ticket que solo recibe el navegador que inició sesión. Hoy quien conoce el secreto de un flujo puede reclamarlo si convence a otra persona de abrir su enlace de inicio (ventana de 5 min, un solo uso). El arreglo toca la API, la app y el panel y obliga a volver a probar Google en el iPhone el día de la entrega; se prefirió no arriesgar la demo. Tampoco se arreglaron: los trabajos de importación que quedan en `running` si el worker muere, ni las subidas de fotos sin tope por mascota.
+- **IA:** auditó, eligió qué entraba (le di ese rol de tech lead para el cierre) y aplicó los arreglos con tests. **Yo:** reviso este registro y vuelvo a probar el recorrido en la demo.
+- **Evidencia:** `AuthTest` (destino `@evil.test` → 422), `ApiTest` (admin no suspendible → 409), suite completa en verde.

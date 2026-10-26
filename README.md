@@ -96,6 +96,8 @@ Errores: siempre `ProblemDetail` con `code` (por ejemplo `PLAN_LIMIT`, `INVALID_
 
 - La demo es local: n8n staging alcanza la API por un túnel cuya URL cambia en cada arranque.
 - El estado del login con Google vive en memoria 5 minutos: sirve para una sola instancia de la API.
+- El `claim` de Google solo pide el secreto del flujo: si alguien logra que otra persona abra *su* enlace de inicio y entre con Google en esos 5 minutos, podría reclamar esa sesión. El arreglo (un ticket de un solo uso que solo recibe el navegador que volvió de Google) está descrito en `docs/DECISIONS.md` §14.
+- Un trabajo de importación queda en `running` si el worker se cae a mitad; hay que relanzarlo desde el panel.
 - El límite de publicaciones del plan se cuenta antes de escribir; dos envíos simultáneos podrían pasarlo (comentado en el código).
 - El cobro del plan Pro, el chat y el visitante sin cuenta quedan para v2.
 - El costo que reporta OpenRouter tarda unos segundos en actualizarse.

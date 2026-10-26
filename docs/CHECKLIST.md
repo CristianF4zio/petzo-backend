@@ -13,7 +13,8 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [~] Dos flujos de n8n en staging, activos y con webhook firmado (403 sin secreto). Flujo 1 (moderación por OpenRouter) probado de punta a punta el 25-oct: ejecución 417, ~7 s, riesgo 90 y razón de la IA. Falta la contraseña de aplicación de Gmail en la credencial SMTP para probar el flujo 2 (Cris)
 - [x] Stagehand: importación completa el 25-oct: el admin la lanza en el panel, el worker lee la página en Chrome real y la API crea 4 borradores con su foto en Storage (log y capturas en `docs/evidencia/stagehand/`). Se corrigió que el modelo no devolvía la URL de la foto: ahora la toma el código
 - [x] Skills y agentes registrados con qué se les encargó y cómo se comprobó (`docs/SKILLS_LOG.md`, `docs/AGENTS_LOG.md` en ambos repos)
-- [x] Modelo de Stagehand elegido y justificado con medición (`stagehand-worker/README.md`, D-11 del registro)
+- [x] Modelo de Stagehand elegido y justificado con medición (`stagehand-worker/README.md`, D-11 del registro); el 26-oct se agregaron la comparación con ventana y headless, el proveedor (OpenAI) y la captura en fallo que pide la guía
+- [x] Auditoría final (26-oct, DECISIONS §14): reglas del reto confirmadas; 6 arreglos en el backend y 4 en los clientes; 27/27 tests, `tsc`, build, lint y export en verde. Quedan como limitación el `claim` de Google sin ticket y los imports que se quedan en `running`
 - [x] Plataforma declarada: iOS con Expo Go (`docs/DECISIONS.md` §2)
 - [x] IA real por OpenRouter: match verificado el 25-oct (Kaiser 85 %, razón en español, 3,4 s, registrado en `ai_logs`). La moderación de n8n y el resumen de solicitudes usan la misma clave y modelo
 
@@ -21,7 +22,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [~] URLs de los dos repos y commit final: borrador listo en `Desktop/petzo/ENTREGA.md`; falta poner el commit final al cerrar
 - [x] README desde cero en ambos repos (versiones, variables, Supabase, Google, arranque, usuario y admin de prueba, API, limitaciones)
 - [ ] Video de 3–5 min (Cris)
-- [ ] Enlaces y evidencia de ejecución de los 2 flujos de n8n (Cris, tras importarlos)
+- [~] Enlaces y evidencia de ejecución de los 2 flujos de n8n: enlaces en `ENTREGA.md` y ejecución 417 del flujo 1. Faltan las capturas de *Executions* y la ejecución del flujo 2 (Cris: contraseña de Gmail)
 - [x] Stagehand: ruta, comando, tarea, modelo y versión, resultado, log, captura y costo (`stagehand-worker/README.md`, `docs/evidencia/stagehand/`)
 - [x] Registro de decisiones `docs/DECISIONS.md`, enlazado desde ambos README
 
