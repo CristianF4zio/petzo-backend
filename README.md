@@ -3,7 +3,7 @@
 API REST de **Petzo**, adopción de perros y gatos en Gran Caracas. Una persona publica una mascota, otra la encuentra y la solicita, el publicador aprueba y ambos se contactan por WhatsApp. La moderación anti-fraude, el resumen de solicitudes y las recomendaciones usan IA.
 
 - **Repos:** este (API, n8n, Stagehand) y [petzo-frontend](https://github.com/CristianF4zio/petzo-frontend) (app móvil en `apps/mobile`, **panel admin en `apps/admin`**).
-- **Registro de decisiones:** [`docs/DECISIONS.md`](docs/DECISIONS.md) · **Modelo de datos:** [guía](https://claude.ai/artifact/HRdiphme71C66X52KqqYym) · **Checklist:** [`docs/CHECKLIST.md`](docs/CHECKLIST.md)
+- **Registro de decisiones:** [`docs/DECISIONS.md`](docs/DECISIONS.md) · **Modelo de datos:** [migraciones](src/main/resources/db/migration/) · **Checklist:** [`docs/CHECKLIST.md`](docs/CHECKLIST.md)
 - **Stagehand:** [`stagehand-worker/`](stagehand-worker/README.md) · **n8n:** [`n8n/`](n8n/README.md)
 
 ## Arquitectura
@@ -33,9 +33,10 @@ Panel (Vite)┘                     ├─ n8n staging (webhooks) ◄─ /intern
 1. Crea un proyecto **gratuito** en Supabase.
 2. **Storage:** crea el bucket público `pet-photos` (tipos `image/jpeg`, máx. 2 MB).
 3. **Authentication → Providers:** activa **Email** (desactiva "Confirm email" para la demo) y **Google** con un cliente OAuth de Google Cloud. En Google Cloud el *Authorized redirect URI* es `https://<proyecto>.supabase.co/auth/v1/callback`.
-4. **Authentication → URL Configuration → Redirect URLs:** agrega el callback de esta API, que es a donde Supabase devuelve el navegador después de Google:
-   - `http://localhost:8090/**` (panel en la PC)
-   - `http://<IP-de-tu-PC>:8090/**` (app en el celular por wifi)
+4. **Authentication → URL Configuration:** Supabase devuelve el navegador al callback de esta API después de Google.
+   - **Site URL:** `http://<IP-de-tu-PC>:8090` (la API en el wifi). Supabase acepta cualquier ruta de ese mismo host, así que el callback funciona aunque no coincida ninguna Redirect URL. Con la IP en Redirect URLs no bastó en la prueba: Supabase devolvía a `localhost:3000/?code=…`.
+   - **Redirect URLs:** `http://localhost:8090/**` (panel en la PC) y `http://<IP-de-tu-PC>:8090/**` (app en el celular).
+   - Si cambia la IP de la PC, actualiza la Site URL y el `.env` de la app.
 5. **Migraciones:** no hay pasos manuales. Flyway aplica `src/main/resources/db/migration` (V1–V3) al arrancar la API: 10 tablas, enums, RLS de solo lectura, trigger que crea el perfil al registrarse y los 11 municipios de Gran Caracas.
 
 ## 2. Variables de entorno
@@ -66,6 +67,16 @@ cd stagehand-worker && npm ci && npm start                       # worker de imp
 ```
 
 La app y el panel se corren desde `petzo-frontend` (ver su README).
+
+## Login con Google: regreso sin tokens en URLs ni logs
+
+1. El cliente (app o panel) genera un `flow` (UUID) y un `secret` aleatorio. Abre en el navegador `GET /api/auth/google/start?flow=…&challenge=base64url(sha256(secret))&redirect=<destino>`. El destino debe estar en `AUTH_REDIRECT_ALLOWLIST`.
+2. La API arma el PKCE con Supabase y redirige a la **pantalla oficial de Google**.
+3. Google → Supabase → `GET /api/auth/google/callback?flow=…&code=…`. La API canjea el `code` del lado del servidor y guarda la sesión en memoria (5 min, un solo uso).
+4. La API redirige el navegador al destino **sin tokens**: `exp://…/--/auth-callback` en la app, `http://localhost:5173/` en el panel.
+5. El cliente pide la sesión con `POST /api/auth/google/claim {flow, secret}` en el cuerpo. Los tokens solo viajan en esa respuesta y la app los guarda en el llavero (`expo-secure-store`).
+
+La API no registra el `code`, el `secret` ni los tokens. Prueba: `AuthTest.googleFlowNeverPutsTokensInUrlsAndIsOneTime`.
 
 ## 4. Usuario de prueba y administrador
 

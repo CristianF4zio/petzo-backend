@@ -27,16 +27,18 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 ### 3. Backend en Java 21 + Spring Boot, datos con Flyway — 22-oct-2026
 - **Problema:** el stack del reto es React Native + Spring Boot; el primer plan era una API en Node.
 - **Decisión:** Spring Boot 3.5 con Spring Security (JWT de Supabase), JPA + Flyway (D-22, D-25).
+- **Por qué:** es el stack que pide el reto; Flyway deja el esquema versionado en el repo y lo aplica al arrancar, así otra persona lo levanta sin pasos manuales.
 - **Descartado:** Node + Express (D-04) y migraciones del CLI de Supabase: no cumplen el stack.
 - **Límite:** `ddl-auto=validate`: la API no arranca si una entidad no coincide con la tabla.
 - **IA:** escribió migraciones V1–V3, servicios y tests. **Yo:** revisé el modelo de datos contra el SPEC y aprobé cada sprint.
-- **Evidencia:** 27 tests (`./mvnw test`), guía del modelo de datos enlazada en el README.
+- **Evidencia:** 27 tests (`./mvnw test`), migraciones en `src/main/resources/db/migration/`.
 
 ### 4. Exactamente dos repos; el panel en una subcarpeta — 25-oct-2026
 - **Problema:** teníamos tres repos (`petzo-backend`, `petzo-frontend`, `petzo-web`); el reto pide exactamente dos.
 - **Decisión:** el panel vive en `petzo-frontend/apps/admin`; la app en `petzo-frontend/apps/mobile`. `petzo-web` queda archivado.
 - **Por qué:** `petzo-frontend` ya tenía `apps/`, y app y panel comparten TypeScript.
 - **Descartado:** panel dentro del backend: mezcla Java con un build de Vite.
+- **Límite:** `petzo-frontend` tiene dos `package.json` independientes (sin workspaces); cada uno se instala por separado.
 - **IA:** un subagente movió el scaffold y construyó el panel; la IA principal revisó su build y sus endpoints. **Yo:** elegí la ubicación y archivo el repo viejo en GitHub.
 - **Evidencia:** `petzo-frontend` commit `e335ed7`.
 
@@ -54,13 +56,16 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Decisión:** `GET /api/auth/google/start?flow&challenge&redirect` → Supabase → Google → `GET /api/auth/google/callback` (la API canjea el código PKCE) → el navegador vuelve a la app **sin tokens** → la app hace `POST /api/auth/google/claim {flow, secret}` y recibe la sesión una sola vez. `challenge = sha256(secret)`: el secreto solo sale del cliente en el cuerpo del POST.
 - **Por qué:** ni el `flow` ni la URL de vuelta sirven para robar la sesión sin el secreto; los destinos de vuelta están en una lista blanca (sin redirección abierta).
 - **Descartado:** devolver tokens en el fragmento de la URL (flujo implícito) y el PKCE en el cliente que usábamos antes.
-- **Límite:** el estado del flujo vive en memoria 5 minutos (`shortcut:` comentado; sirve para una sola instancia de la API).
+- **Límite:** el estado del flujo vive en memoria 5 minutos (`shortcut:` comentado; sirve para una sola instancia de la API). En la prueba con el iPhone, Supabase no aceptó la Redirect URL con la IP y devolvió el navegador al Site URL (`localhost:3000`). Se resolvió poniendo como **Site URL** la API en el wifi (`http://<IP>:8090`); si la IP cambia, hay que actualizarla.
 - **IA:** diseñó el protocolo y lo probó. **Yo:** agrego las URLs de callback en Supabase y pruebo el login real con mi cuenta de Google.
 - **Evidencia:** `AuthTest.googleFlowNeverPutsTokensInUrlsAndIsOneTime`; cadena real API → Supabase → `accounts.google.com` verificada el 25-oct.
 
 ### 7. Panel admin protegido en el backend — 25-oct-2026
+- **Problema:** el panel modera, verifica fundaciones, suspende usuarios e importa catálogos; cualquier usuario con sesión podría llamar esas rutas.
 - **Decisión:** toda ruta `/api/admin/**` exige `profiles.role = 'admin'` en el backend; el panel además oculta su contenido si `/api/me` no es admin.
 - **Por qué:** ocultar botones no basta.
+- **Descartado:** guardar el rol como claim en el JWT de Supabase: exige un hook de Auth y el rol cambiado no aplica hasta renovar el token; leerlo de `profiles` en cada petición aplica al instante.
+- **Límite:** una consulta a `profiles` por petición admin; el primer admin se crea a mano con SQL (README §4).
 - **IA:** construyó el panel (subagente). **Yo:** creo el admin con un `update` en Supabase (ver README) y pruebo la cola de moderación.
 - **Evidencia:** `ApiTest.adminFlows` (403 a no-admin), `apps/admin`.
 
@@ -78,6 +83,7 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Decisión:** pre-evaluación, match, moderación y Stagehand usan OpenRouter; modelo `openai/gpt-4.1-mini`; tope diario de tokens compartido (`AI_DAILY_TOKEN_CAP`) que también frena la moderación.
 - **Por qué:** una sola clave; cada moderación cuesta cerca de $0.0005, así que el saldo alcanza.
 - **Descartado:** dejar la IA apagada (los flujos tienen respaldo manual, pero el valor de la idea es la IA).
+- **Límite:** el saldo de $5 no se recarga; al llegar al tope diario la IA se apaga y todo queda en revisión manual. Gasto total al 26-oct: $0.0075.
 - **IA:** reemplazó el SDK de Anthropic por llamadas HTTP y quitó la dependencia. **Yo:** aprobé usar el saldo también fuera de Stagehand.
 - **Evidencia:** `AiService.java`, `ai_logs`.
 
@@ -91,27 +97,40 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Evidencia:** `docs/evidencia/stagehand/` (log y capturas).
 
 ### 11. Modelo y gasto de Stagehand — 25-oct-2026
+- **Problema:** hay que elegir el modelo con $5 sin recarga, midiendo en la tarea real y no por el nombre.
 - **Decisión:** `openai/gpt-4.1-mini` (proveedor OpenAI vía OpenRouter).
 - **Por qué:** con la misma página acertó 4/4 fichas, igual que `google/gemini-2.5-flash`, a menor costo ($0.001004 por corrida, leído de `/api/v1/key`) y sin tokens de razonamiento.
 - **Descartado:** Gemini 2.5 Flash (≈ $0.0012, más caro por salida) y Claude Haiku 4.5 (~3× más caro, sin falla que lo justifique).
 - **Límite:** tope de $0.25 por corrida, 120 s por trabajo, 2 intentos de lectura.
+- **IA:** corrió la misma página con los dos modelos (`npm run dry`) y leyó el gasto real de `/api/v1/key`. **Yo:** comparé las fichas extraídas contra la captura y aprobé el modelo más barato con igual acierto.
 - **Evidencia:** tabla en `stagehand-worker/README.md`; saldo $4.998996 de $5 tras las pruebas.
 - **26-oct:** se comparó con ventana y headless (mismo 4/4 y mismos campos); el log guarda el proveedor (OpenAI), el modo y una captura `*-fallo.png` cuando algo falla, como pide la guía. Gasto total de la clave: $0.0075.
 
 ### 12. Publicación como borrador y galería en un solo paso — 22-oct-2026 (D-28)
 - **Problema:** subir fotos de a una dejaba mascotas atascadas en revisión y moderaba N veces.
 - **Decisión:** `POST /pets` crea un borrador; la galería entera se guarda con `PUT /pets/{id}/photos`; `PATCH status` la envía a revisión.
+- **Por qué:** la moderación ve la publicación completa una sola vez, y un error a mitad de la subida no deja nada en revisión.
+- **Descartado:** subir y moderar foto por foto (era el diseño original): N moderaciones y estados intermedios.
+- **Límite:** un borrador abandonado queda en "Mis publicaciones" hasta que su dueño lo borra; las fotos subidas y no guardadas en la galería no se limpian solas.
 - **IA:** el `code-review` encontró el problema; la IA lo corrigió con tests. **Yo:** detecté en el iPhone que una edición quedaba en revisión y pedí la auditoría.
 - **Evidencia:** `InternalTest.editWithSameGalleryIsModeratedForTheFinalVersion` (falla si se quita el arreglo; se probó).
 
-### 13. Recortes y errores que cambiaron el rumbo
-- **Recortes:** cobro del plan Pro, chat, mascotas perdidas y APK de tiendas (v2). El visitante sin cuenta no está: la app pide sesión para todo.
+### 13. Recortes y errores que cambiaron el rumbo — 22 al 25-oct-2026
+- **Problema:** el plazo (22 al 26-oct) no alcanza para todo el SPEC, y las pruebas reales mostraron fallas que el código no dejaba ver.
+- **Decisión (recortes):** cobro del plan Pro, chat, mascotas perdidas y APK de tiendas pasan a v2. El visitante sin cuenta no está: la app pide sesión para todo.
+- **Por qué:** el reto pide terminar y demostrar el recorrido completo; esas funciones no son parte del recorrido principal.
+- **Descartado:** hacer el visitante sin cuenta y el APK de EAS. Duplicaban pantallas y la cola de EAS tarda 20–40 min, sin sumar a los requisitos.
 - **Cambios de rumbo:** API en Node → Spring Boot (stack del reto); tres repos → dos; SDK de Supabase en la app → todo por la API; Instagram → página demo; Anthropic → OpenRouter.
 - **Errores encontrados en pruebas reales:** la Bienvenida no aparecía en el iPhone (faltaba `redirectTo` en Expo Router 58); la IA podía deshacer la aprobación del dueño (guardaba la entidad entera); editar dejaba la mascota en revisión para siempre (versión subida sin moderar). Los tres se corrigieron con tests.
+- **Límite:** la demo exige cuenta y corre en local (sin deploy).
+- **IA:** auditó el código y corrigió los errores con tests. **Yo:** encontré los errores probando en el iPhone y decidí los recortes.
+- **Evidencia:** `petzo-frontend` commit `57779d9` (Bienvenida); `InternalTest` y `RequestTest` (IA y aprobaciones); SPEC §10 (D-12, v2).
 
 ### 14. Auditoría final — 26-oct-2026
 - **Problema:** antes de entregar hay que revisar seguridad y lo que puede romper la demo, sin rehacer nada.
 - **Decisión:** dos subagentes auditaron los repos en paralelo (`ponytail-audit`, solo lectura). Las reglas del reto se cumplen (403 en admin, secreto en `/internal`, sin secretos en git ni en evidencia, exportaciones de n8n sin credenciales). Corregí lo pequeño y seguro: la lista de destinos de Google aceptaba `http://localhost:5173@evil.test` (ahora el prefijo debe terminar en `/`, `?` o `#`, con test); un admin podía suspenderse a sí mismo (409, con test); los 405/415 de Spring no salían como `ProblemDetail`; "correo sin confirmar" y el límite de intentos se mostraban como "servicio caído"; el usuario de fundación no admitía `-` y por eso los borradores importados de `patas-del-avila` nunca llegaban a la fundación; en la app, pantalla en blanco si la API no responde al abrir, y un refresh en curso podía deshacer el cierre de sesión; en el panel, "Retirar" fallaba en el segundo reporte de la misma mascota.
+- **Por qué:** el día de la entrega solo entran cambios pequeños, con test y que no obliguen a volver a probar todo en el teléfono.
+- **Límite:** lo que no se corrigió queda en "Limitaciones conocidas" del README del backend.
 - **Descartado (queda como limitación conocida):** amarrar el `claim` de Google a un ticket que solo recibe el navegador que inició sesión. Hoy quien conoce el secreto de un flujo puede reclamarlo si convence a otra persona de abrir su enlace de inicio (ventana de 5 min, un solo uso). El arreglo toca la API, la app y el panel y obliga a volver a probar Google en el iPhone el día de la entrega; se prefirió no arriesgar la demo. Tampoco se arreglaron: los trabajos de importación que quedan en `running` si el worker muere, ni las subidas de fotos sin tope por mascota.
 - **IA:** auditó, eligió qué entraba (le di ese rol de tech lead para el cierre) y aplicó los arreglos con tests. **Yo:** reviso este registro y vuelvo a probar el recorrido en la demo.
 - **Evidencia:** `AuthTest` (destino `@evil.test` → 422), `ApiTest` (admin no suspendible → 409), suite completa en verde.
