@@ -8,6 +8,8 @@
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; background: #fafaf9; color: #1c1917; }
     header { padding: 24px; background: #fff; border-bottom: 1px solid #e7e5e4; }
+    main[hidden] { display: none; }
+    button { margin-top: 12px; padding: 10px 16px; font: inherit; border: 0; border-radius: 8px; background: #b45309; color: #fff; cursor: pointer; }
     main { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; padding: 24px; }
     article { background: #fff; border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; }
     article img { width: 100%; display: block; }
@@ -21,8 +23,10 @@
   <header>
     <h1>Refugio Patas del Ávila</h1>
     <p>Rescatamos perros y gatos en Libertador, Caracas. Todos los datos de esta página son ficticios.</p>
+    <!-- Like many foundation sites, the list opens from a button: Stagehand observes and clicks it before reading -->
+    <button id="ver-adopcion" type="button" onclick="document.getElementById('adopcion').hidden = false; this.hidden = true">Ver mascotas en adopción</button>
   </header>
-  <main id="adopcion">
+  <main id="adopcion" hidden>
     <article>
       <img src="/demo/img/luna.jpg" alt="Luna">
       <div>

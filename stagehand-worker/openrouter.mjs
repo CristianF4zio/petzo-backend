@@ -13,10 +13,14 @@ const client = new OpenAI({
   maxRetries: 0,
 });
 
-// Tokens of this process, so each run can report what it spent, and the provider OpenRouter routed to
+// Tokens of the current run (the worker resets it per job), and the provider OpenRouter routed to
 export const usage = { calls: 0, input: 0, output: 0, provider: null };
+// Hard cap of model calls per run: observe + extract with their retries fit in 6; more means something is looping
+const MAX_CALLS = 6;
 
 export async function generate(params) {
+  if (usage.calls >= MAX_CALLS) throw Error(`Tope de ${MAX_CALLS} llamadas al modelo por corrida`);
+  usage.calls += 1; // counted before the call: a failed call can also cost
   const f = params.responseFormat;
   if (f?.type !== "json_schema") throw Error("Se esperaba JSON schema");
   const messages = params.messages.map((m) => ({
@@ -32,7 +36,6 @@ export async function generate(params) {
     temperature: params.temperature,
     response_format: { type: "json_schema", json_schema: { name: f.name, schema: f.schema, strict: true } },
   });
-  usage.calls += 1;
   usage.input += r.usage?.prompt_tokens ?? 0;
   usage.output += r.usage?.completion_tokens ?? 0;
   usage.provider = r.provider ?? usage.provider;

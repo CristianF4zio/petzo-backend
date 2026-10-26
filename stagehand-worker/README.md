@@ -1,6 +1,6 @@
 # Worker de Stagehand (importación de fundaciones)
 
-Abre en un Chrome real la página de adopción de una fundación, lee sus mascotas con Stagehand + IA y las manda a la API como **borradores** (`source = instagram`, la columna conserva su nombre). El admin las revisa y la fundación las publica desde la app. El worker **nunca toca Supabase**: reclama trabajos y entrega resultados por `/internal/*` con el header `x-internal-secret` (D-24).
+Abre en un Chrome real la página de una fundación, pulsa "Ver mascotas en adopción" (`observe` + `act`), lee sus mascotas (`extract`) con Stagehand + IA y las manda a la API como **borradores** (`source = instagram`, la columna conserva su nombre). El admin las revisa y la fundación las publica desde la app. El worker **nunca toca Supabase**: reclama trabajos y entrega resultados por `/internal/*` con el header `x-internal-secret` (D-24).
 
 | Qué | Valor |
 | --- | --- |
@@ -24,11 +24,16 @@ Para encolar un trabajo: panel admin → **Importaciones** → identificador `pa
 
 ## Cómo cuida el saldo y evita errores
 
-- Instrucciones atómicas: `goto` por código → espera `#adopcion article` (10 s máx.) → captura → **un** `extract` con esquema Zod.
-- Límites: 120 s por corrida, 2 intentos de `extract` (solo lectura) con espera creciente, sin bucles que consulten al modelo. El cliente corta cada llamada a 30 s y no reintenta.
-- Antes de cada trabajo lee el saldo con `GET https://openrouter.ai/api/v1/key` (la clave nunca se imprime) y se detiene si quedan menos de $0.25.
+- Flujo con las tres operaciones de la guía, en pasos atómicos:
+  1. `goto` por código y espera a que el botón `#ver-adopcion` sea visible (10 s máx.).
+  2. **`observe`** "Encuentra el botón para ver las mascotas en adopción". El código **comprueba** que la acción propuesta sea un `click` sobre ese botón antes de ejecutarla.
+  3. **`act`** con esa acción y **verificación del estado** por código: la lista `#adopcion` queda visible con fichas. El clic es de solo lectura y nunca se repite a ciegas: si `act` falla o vence su tiempo, decide el estado de la página.
+  4. Captura y **`extract`** con esquema Zod.
+- Límites: 120 s por corrida; 30 s por llamada al modelo, sin reintentos del cliente; **máximo 6 llamadas al modelo por corrida** (una corrida normal usa 3); `observe` y `extract` se reintentan como máximo 2 veces con espera creciente y la causa queda en el log. Ningún bucle consulta al modelo: el polling (cola de trabajos y estado de la página) es código.
+- Saldo: antes de cada corrida lee `GET https://openrouter.ai/api/v1/key` (la clave nunca se imprime). Se detiene si no puede leerlo, si la clave **no tiene límite de gasto** o si quedan menos de $0.25 (tope por corrida). El log registra el costo de la corrida y el saldo disponible (`saldoUsd`).
+- El contenido de la página no puede cambiar las instrucciones: estas son fijas en el código, la acción se valida antes de ejecutarla y los datos se comprueban contra el DOM.
 - Valida lo que devuelve el modelo: descarta fichas sin nombre o sin foto y resuelve las URLs de foto contra la página. La API vuelve a validar y solo descarga fotos de los hosts de `IMPORT_ALLOWED_HOSTS`.
-- Cada paso queda en `evidencia/runs.log` (hora, URL, paso, modelo, proveedor que eligió OpenRouter, modo headless, duración, tokens, resultado). Si algo falla se guarda una captura `*-fallo.png` de la página en ese momento y el error en el log (probado con una página inexistente: `npm run dry -- no-existe` corta a los 10 s esperando las fichas, sin llamar al modelo). La carpeta `evidencia/` está fuera de git; la evidencia limpia de la entrega está en `../docs/evidencia/stagehand/`.
+- Cada paso queda en `evidencia/runs.log` (hora, URL, paso, modelo, proveedor que eligió OpenRouter, modo headless, duración, tokens, resultado). Si algo falla se guarda una captura `*-fallo.png` de la página en ese momento y el error en el log (probado con una página inexistente: `npm run dry -- no-existe` corta a los 10 s esperando el botón, sin llamar al modelo). La carpeta `evidencia/` está fuera de git; la evidencia limpia de la entrega está en `../docs/evidencia/stagehand/`.
 
 ## Elección del modelo (25-oct-2026, misma página, `npm run dry`)
 
@@ -41,6 +46,8 @@ Se eligió **gpt-4.1-mini**: mismo acierto, salida estructurada estricta (`json_
 
 **Proveedor:** OpenRouter enruta `openai/gpt-4.1-mini` a **OpenAI** (campo `provider` de la respuesta, registrado en el log desde el 26-oct).
 
-**Con ventana vs. headless (26-oct-2026):** el mismo resultado en ambos modos, 4/4 fichas con los mismos campos y fotos (1 449 tokens de entrada, 229–235 de salida). Con ventana el `extract` tardó 5,2 s y headless 9,6 s; la diferencia es de la llamada al modelo, no de la página. Costo por corrida ≈ $0.00095. Saldo usado en total: $0.0075 de $5.
+**Flujo observe → act → extract (26-oct-2026):** con ventana y headless dio el mismo resultado. `observe` propuso "click · Botón para ver las mascotas en adopción", `act` abrió la lista y `extract` leyó 4/4 fichas. Fueron 3 llamadas, 1 979 tokens de entrada y 275 de salida, **$0.001227** por corrida; saldo $4.99 de $5. Comprobé las 4 fichas contra la captura (`patas-del-avila-observe-act-*.png`).
+
+**Con ventana vs. headless (26-oct-2026, versión anterior con solo `extract`):** el mismo resultado en ambos modos, 4/4 fichas con los mismos campos y fotos (1 449 tokens de entrada, 229–235 de salida). Con ventana el `extract` tardó 5,2 s y headless 9,6 s; la diferencia es de la llamada al modelo, no de la página. Costo por corrida ≈ $0.00095. Saldo usado en total: $0.0075 de $5.
 
 Evidencia: `docs/evidencia/stagehand/runs.log`, las capturas `patas-del-avila-*.png` (página real que vio el navegador) y `no-existe-*-fallo.png` (captura de una corrida fallida).

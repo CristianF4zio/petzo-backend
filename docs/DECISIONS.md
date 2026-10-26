@@ -90,7 +90,7 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 
 ### 10. Stagehand sobre una página demo propia — 25-oct-2026
 - **Problema:** el worker leía perfiles de Instagram; Instagram pide login y sus términos prohíben el scraping (el reto pide respetar términos y no automatizar logins).
-- **Decisión:** página ficticia de una fundación servida por la API (`/demo/fundaciones/patas-del-avila.html`); Stagehand la abre en Chrome real, extrae las mascotas y las manda como borradores por `/internal`.
+- **Decisión:** página ficticia de una fundación servida por la API (`/demo/fundaciones/patas-del-avila.html`). Stagehand la abre en Chrome real, pulsa "Ver mascotas en adopción" (`observe` + `act`), extrae las mascotas (`extract`) y las manda como borradores por `/internal`. No hay una API que sirva: el catálogo de una fundación vive en su sitio web, y por eso la tarea es de navegador.
 - **Por qué:** es una tarea de navegador real dentro de la idea (importar el catálogo de una fundación autorizada, HU-14) sin violar términos.
 - **Descartado:** buscar otro sitio público: no garantiza permiso ni estabilidad para la demo.
 - **Límite:** la API solo descarga fotos de `IMPORT_ALLOWED_HOSTS` (protección SSRF).
@@ -105,7 +105,8 @@ Enlazado desde `README.md` de **petzo-backend** y **petzo-frontend**.
 - **Límite:** tope de $0.25 por corrida, 120 s por trabajo, 2 intentos de lectura.
 - **IA:** corrió la misma página con los dos modelos (`npm run dry`) y leyó el gasto real de `/api/v1/key`. **Yo:** comparé las fichas extraídas contra la captura y aprobé el modelo más barato con igual acierto.
 - **Evidencia:** tabla en `stagehand-worker/README.md`; saldo $4.998996 de $5 tras las pruebas.
-- **26-oct:** se comparó con ventana y headless (mismo 4/4 y mismos campos); el log guarda el proveedor (OpenAI), el modo y una captura `*-fallo.png` cuando algo falla, como pide la guía. Gasto total de la clave: $0.0075.
+- **26-oct:** se comparó con ventana y headless (mismo 4/4 y mismos campos); el log guarda el proveedor (OpenAI), el modo y una captura `*-fallo.png` cuando algo falla, como pide la guía.
+- **26-oct (revisión contra la guía):** el flujo usaba solo `extract` y la guía dice que basta uno con `observe`, `act` y `extract`. La página demo ahora abre su lista con un botón, como muchos sitios reales. El worker observa el botón, comprueba que la acción sea ese clic, actúa y verifica el estado antes de extraer. Además: tope de 6 llamadas al modelo por corrida; se detiene si la clave no tiene límite de gasto o si no puede leer el saldo; el chequeo de saldo pasó dentro del `try` (antes un fallo dejaba el trabajo en `running`); los tokens se reinician por trabajo; el log registra el saldo disponible. Corrida: 3 llamadas, $0.001227, 4/4 con ventana y headless. Gasto total de la clave: $0.0097 de $5.
 
 ### 12. Publicación como borrador y galería en un solo paso — 22-oct-2026 (D-28)
 - **Problema:** subir fotos de a una dejaba mascotas atascadas en revisión y moderaba N veces.

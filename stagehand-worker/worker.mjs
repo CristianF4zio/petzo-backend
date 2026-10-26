@@ -1,5 +1,6 @@
 // Petzo import worker (D-24, D-32): claims a queued import from the API, opens the foundation's adoption page in a real
-// local Chrome, extracts the pets with Stagehand + OpenRouter and sends them back to the API as drafts. It never
+// local Chrome, opens its adoption list (observe → check → act → check state) and extracts the pets with Stagehand +
+// OpenRouter, then sends them back to the API as drafts. It never
 // touches Supabase. Usage: `npm start` (polls every 10 s) · `npm run once` (one job, then exit) ·
 // `npm run dry -- patas-del-avila` (extract only, nothing is sent; for model comparison).
 import { localBrowser, Stagehand } from "@browserbasehq/stagehand";
@@ -12,7 +13,7 @@ const SITE = process.env.DEMO_SITE_URL ?? `${API}/demo/fundaciones`;
 const SECRET = process.env.INTERNAL_SECRET ?? "";
 const HEADLESS = process.env.HEADLESS !== "false";
 const MAX_RUN_MS = 120_000; // whole job, browser included
-const MAX_EXTRACT_TRIES = 2; // reads only; never retried blindly after a write
+const MAX_READ_TRIES = 2; // observe/extract only; act is never retried blindly
 const MAX_COST_USD = 0.25; // per-run budget: stop before extracting if the key already spent this much more
 
 const Pet = z.object({
@@ -37,11 +38,41 @@ async function api(path, init = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+/** Reads (observe/extract) are retried at most MAX_READ_TRIES times with a growing wait, logging each cause. */
+async function retry(step, fn) {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      await log({ step, attempt: i, error: String(e).slice(0, 300) });
+      if (i >= MAX_READ_TRIES) throw e;
+      await new Promise((r) => setTimeout(r, 1000 * i));
+    }
+  }
+}
+
+/** Polls the page with code (never the model) until fn is true, or fails after ms. */
+async function waitFor(page, fn, ms) {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((r) => setTimeout(r, 250))) {
+    if (await page.evaluate(fn)) return;
+  }
+  throw Error("La lista de adopción no apareció tras el clic");
+}
+
+/** Stops the run if the balance can't be read, the key has no spend limit, or less than one run's budget is left. */
+async function checkBudget() {
+  const k = await keyUsage();
+  if (k.limit == null) throw Error("La clave de OpenRouter no tiene límite de gasto configurado");
+  if (k.limitRemaining < MAX_COST_USD) throw Error("Saldo de OpenRouter insuficiente para otra corrida");
+  return k;
+}
+
 /** Opens the page and extracts its pets. Returns pets with absolute photo URLs, validated for the business. */
 async function extract(slug) {
   if (!/^[a-z0-9-]{1,40}$/.test(slug)) throw Error(`Identificador inválido: ${slug}`);
   const url = `${SITE}/${slug}.html`;
   const startedAt = Date.now();
+  Object.assign(usage, { calls: 0, input: 0, output: 0, provider: null }); // per run, so the call cap and the token report are per job
   const browser = await localBrowser.launch({ headless: HEADLESS });
   let stagehand;
   try {
@@ -50,22 +81,25 @@ async function extract(slug) {
     if (!page) throw Error("No hay página activa");
     await page.goto(url);
     await log({ step: "goto", url });
-    // Visible condition before extracting, with a limit (no blind sleeps)
-    await page.waitForSelector("#adopcion article", { timeout: 10_000 });
+    // Visible condition before observing, with a limit (no blind sleeps)
+    await page.waitForSelector("#ver-adopcion", { timeout: 10_000 });
+
+    // observe proposes the click without running it; code checks it is the expected one before act
+    const [action] = await retry("observe", async () => {
+      const { data } = await stagehand.observe("Encuentra el botón para ver las mascotas en adopción");
+      if (!data?.length) throw Error("No encontró el botón");
+      return data;
+    });
+    if (action.method !== "click" || !/adopci/i.test(action.description ?? "")) throw Error(`Acción inesperada: ${action.method} · ${action.description}`);
+    await log({ step: "observe", action: `${action.method} · ${action.description}` });
+    // Read-only click, never repeated: if act fails or times out, the page state decides whether it happened
+    await stagehand.act(action).catch((e) => log({ step: "act", error: String(e).slice(0, 300) }));
+    await waitFor(page, () => !document.getElementById("adopcion").hidden && document.querySelectorAll("#adopcion article").length > 0, 10_000);
     const shot = `evidencia/${slug}-${startedAt}.png`;
     await page.screenshot({ path: shot });
-    await log({ step: "screenshot", file: shot });
+    await log({ step: "act", result: "lista de adopción visible", screenshot: shot });
 
-    let data;
-    for (let i = 1; i <= MAX_EXTRACT_TRIES && !data; i++) {
-      try {
-        ({ data } = await stagehand.extract("Lee todas las fichas de mascotas en adopción de esta página. Una entrada por ficha.", Page));
-      } catch (e) {
-        await log({ step: "extract", attempt: i, error: String(e).slice(0, 300) });
-        if (i === MAX_EXTRACT_TRIES) throw e;
-        await new Promise((r) => setTimeout(r, 1000 * i));
-      }
-    }
+    const data = await retry("extract", async () => (await stagehand.extract("Lee todas las fichas de mascotas en adopción de esta página. Una entrada por ficha.", Page)).data);
     // Photo URLs come from code, not the model: the accessibility snapshot it reads has the alt text but not the src.
     // Each card's <img> is matched to the extracted pet by its heading.
     const photos = await page.evaluate(() =>
@@ -94,14 +128,14 @@ async function extract(slug) {
 const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(Error(`Corrida cortada a los ${ms / 1000} s`)), ms))]);
 
 async function runJob(job) {
-  const before = await keyUsage();
-  if (before.limitRemaining != null && before.limitRemaining < MAX_COST_USD) throw Error("Saldo de OpenRouter insuficiente para otra corrida");
   try {
+    // Inside the try: a budget failure marks the claimed job as failed instead of leaving it running
+    const before = await checkBudget();
     const pets = await withTimeout(extract(job.instagramHandle), MAX_RUN_MS);
     const { created } = await api(`/internal/imports/${job.id}/pets`, { method: "POST", body: JSON.stringify({ pets }) });
     await api(`/internal/imports/${job.id}/status`, { method: "POST", body: JSON.stringify({ status: "done", inputTokens: usage.input, outputTokens: usage.output }) });
     const after = await keyUsage();
-    await log({ step: "done", job: job.id, created, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage });
+    await log({ step: "done", job: job.id, created, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage, saldoUsd: after.limitRemaining });
   } catch (e) {
     await log({ step: "failed", job: job.id, error: String(e).slice(0, 300) });
     // A timeout after the POST may mean the drafts were created: the API keeps the count, so only the status is reported
@@ -116,10 +150,10 @@ async function main() {
   await mkdir("evidencia", { recursive: true });
   const [mode, slug] = process.argv.slice(2);
   if (mode === "dry") {
-    const before = await keyUsage();
+    const before = await checkBudget();
     const pets = await withTimeout(extract(slug ?? "patas-del-avila"), MAX_RUN_MS);
     const after = await keyUsage();
-    await log({ step: "dry-run", found: pets.length, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage });
+    await log({ step: "dry-run", found: pets.length, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage, saldoUsd: after.limitRemaining });
     return;
   }
   if (!SECRET) throw Error("Falta INTERNAL_SECRET (ver .env.example)");
