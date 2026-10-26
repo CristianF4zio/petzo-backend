@@ -34,6 +34,9 @@ public class AdminController {
 	@GetMapping("/imports")
 	List<com.petzo.domain.Simple.ImportJob> imports() { return imports.imports(); }
 
+	@GetMapping("/imported-foundations")
+	List<com.petzo.web.Dtos.ImportedFoundation> importedFoundations() { return imports.importedFoundations(); }
+
 	@GetMapping("/moderation")
 	List<PetDto> moderation() { return admin.moderationQueue(); }
 

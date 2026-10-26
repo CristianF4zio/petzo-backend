@@ -77,7 +77,11 @@ public final class Dtos {
 	public record ImportedPet(String name, Species species, Sex sex, Types.Size size, Short ageMonths, String description, @NotNull List<String> photoUrls,
 			String sourceUrl) {}
 
-	public record ImportedPets(@NotNull @Size(max = 10) List<@jakarta.validation.Valid ImportedPet> pets) {}
+	/** foundationName and sourceUrl describe the page the worker read (optional for older workers). */
+	public record ImportedPets(@NotNull @Size(max = 10) List<@jakarta.validation.Valid ImportedPet> pets, String foundationName, String sourceUrl) {}
+
+	/** One row per foundation page Stagehand has read, with what it collected. */
+	public record ImportedFoundation(String handle, String name, String sourceUrl, long runs, java.time.Instant lastImport, String lastStatus, long petsImported, boolean verified) {}
 
 	public record ImportStatusInput(@NotNull ImportStatus status, @Size(max = 500) String error, long inputTokens, long outputTokens) {}
 

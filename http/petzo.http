@@ -172,6 +172,10 @@ Content-Type: application/json
 
 {"instagramHandle": "patas-del-avila"}
 
+### Admin: foundations read by Stagehand (name, page, pets, runs, last status, verified)
+GET {{api}}/api/admin/imported-foundations
+Authorization: Bearer {{token}}
+
 ### Internal (n8n): moderation result
 POST {{api}}/internal/pets/{{petId}}/moderation-result
 x-internal-secret: {{internalSecret}}

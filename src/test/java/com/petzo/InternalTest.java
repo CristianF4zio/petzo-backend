@@ -133,11 +133,16 @@ class InternalTest {
 				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
 		mvc.perform(get("/internal/imports/next").header("x-internal-secret", SECRET)).andExpect(jsonPath("$.instagramHandle").value(handle));
 		mvc.perform(withJson(post("/internal/imports/" + job + "/pets"),
-				"{\"pets\":[{\"name\":\"Canela\",\"species\":\"dog\",\"ageMonths\":999,\"description\":\"" + "Rescatada ".repeat(300) + "\",\"photoUrls\":[\"http://evil.test/x.jpg\"],\"sourceUrl\":\"https://instagram.com/p/1\"}]}")
+				"{\"pets\":[{\"name\":\"Canela\",\"species\":\"dog\",\"ageMonths\":999,\"description\":\"" + "Rescatada ".repeat(300) + "\",\"photoUrls\":[\"http://evil.test/x.jpg\"],\"sourceUrl\":\"https://instagram.com/p/1\"}],\"foundationName\":\"Refugio de Prueba\",\"sourceUrl\":\"https://instagram.com/p\"}")
 				.header("x-internal-secret", SECRET)).andExpect(jsonPath("$.created").value(1));
 		mvc.perform(withJson(post("/internal/imports/" + job + "/status"), "{\"status\":\"done\",\"inputTokens\":50000,\"outputTokens\":2000}").header("x-internal-secret", SECRET))
 				.andExpect(status().isNoContent());
 		mvc.perform(get("/api/admin/imports").with(as(admin))).andExpect(jsonPath("$[?(@.id=='" + job + "')].petsCreated").value(1));
+		// the foundation Stagehand read shows up in Fundaciones with what was collected
+		mvc.perform(get("/api/admin/imported-foundations").with(as(admin)))
+				.andExpect(jsonPath("$[?(@.handle=='" + handle + "')].name").value("Refugio de Prueba"))
+				.andExpect(jsonPath("$[?(@.handle=='" + handle + "')].petsImported").value(1));
+		mvc.perform(get("/api/admin/imported-foundations").with(as(plain))).andExpect(status().isForbidden());
 
 		// a later run of the same page (e.g. the scheduled one) does not create the same pet again
 		String again = json.readTree(mvc.perform(withJson(post("/api/admin/imports"), "{\"instagramHandle\":\"" + handle + "\"}").with(as(admin)))

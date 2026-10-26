@@ -23,7 +23,10 @@ const Card = z.object({
   breed: z.string().nullable().describe("Raza"),
   adopted: z.boolean().describe("true si la ficha dice ¡Adoptado!"),
 });
-const List = z.object({ dogs: z.array(Card).max(MAX_PETS) });
+const List = z.object({
+  foundation: z.string().describe("Nombre de la asociación o refugio que publica la página"),
+  dogs: z.array(Card).max(MAX_PETS),
+});
 const Detail = z.object({ name: z.string(), description: z.string().describe("Texto que describe al perro: carácter, historia, necesidades") });
 
 const log = async (entry) => {
@@ -121,7 +124,7 @@ async function run() {
     const dogs = list.dogs
       .filter((d) => shown.has(d.name.trim().toUpperCase()))
       .map((d) => ({ name: d.name.trim(), species: "dog", sex: d.sex, size: size(d.weightKg), ageMonths: ageMonths(d.birthDate), breed: d.breed, adopted: d.adopted }));
-    await log({ step: "extract", read: list.dogs.length, kept: dogs.length, dogs: dogs.map((d) => `${d.name} (${d.sex}, ${d.size ?? "?"}, ${d.ageMonths ?? "?"}m${d.adopted ? ", adoptada" : ""})`), tokens: { ...usage } });
+    await log({ step: "extract", foundation: list.foundation.trim(), read: list.dogs.length, kept: dogs.length, dogs: dogs.map((d) => `${d.name} (${d.sex}, ${d.size ?? "?"}, ${d.ageMonths ?? "?"}m${d.adopted ? ", adoptada" : ""})`), tokens: { ...usage } });
     if (!dogs.length) throw Error("Ninguna ficha leída coincide con las visibles");
 
     // 5) one profile, opened by its URL from the DOM (known step = code), same host only

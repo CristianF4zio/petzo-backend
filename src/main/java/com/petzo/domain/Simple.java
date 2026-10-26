@@ -49,6 +49,8 @@ public final class Simple {
 		public Types.ImportStatus status = Types.ImportStatus.queued;
 		public int petsCreated;
 		public String error;
+		public String foundationName;
+		public String sourceUrl;
 		@Generated(event = EventType.INSERT) @Column(insertable = false, updatable = false) public Instant createdAt;
 	}
 

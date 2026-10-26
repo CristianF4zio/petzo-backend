@@ -89,6 +89,21 @@ public class InternalService {
 	@Transactional(readOnly = true)
 	public List<ImportJob> imports() { return jobs.findTop50ByOrderByCreatedAtDesc(); }
 
+	/** Foundations read by Stagehand: latest name and page, how many runs and pets, and whether a verified account owns the handle. */
+	@Transactional(readOnly = true)
+	public List<ImportedFoundation> importedFoundations() {
+		return jdbc.query("""
+				select j.instagram_handle,
+				  (select x.foundation_name from import_jobs x where x.instagram_handle = j.instagram_handle and x.foundation_name is not null order by x.created_at desc limit 1),
+				  (select x.source_url from import_jobs x where x.instagram_handle = j.instagram_handle and x.source_url is not null order by x.created_at desc limit 1),
+				  count(*), max(j.created_at),
+				  (select x.status::text from import_jobs x where x.instagram_handle = j.instagram_handle order by x.created_at desc limit 1),
+				  coalesce(sum(j.pets_created), 0),
+				  exists (select 1 from profiles p where lower(p.foundation_instagram) = lower(j.instagram_handle) and p.verification_status = 'verified')
+				from import_jobs j group by j.instagram_handle order by max(j.created_at) desc limit 100""",
+				(rs, i) -> new ImportedFoundation(rs.getString(1), rs.getString(2), rs.getString(3), rs.getLong(4), rs.getTimestamp(5).toInstant(), rs.getString(6), rs.getLong(7), rs.getBoolean(8)));
+	}
+
 	/**
 	 * Queues one import per configured foundation page on a schedule (IMPORT_CRON, Caracas time); the worker picks it up.
 	 * Skips a page that already has a job queued or running, so a slow run is never doubled.
@@ -129,6 +144,8 @@ public class InternalService {
 		if (job.status != ImportStatus.running) throw ApiException.conflict("INVALID_STATUS", "El trabajo no está en curso");
 		Profile owner = profiles.findFirstByFoundationInstagramIgnoreCaseAndVerificationStatus(job.instagramHandle, VerificationStatus.verified)
 				.orElseGet(() -> profiles.findById(job.requestedBy).orElseThrow());
+		if (in.foundationName() != null && !in.foundationName().isBlank()) job.foundationName = cut(in.foundationName().trim(), 120);
+		if (in.sourceUrl() != null && !in.sourceUrl().isBlank()) job.sourceUrl = cut(in.sourceUrl(), 500);
 		int created = 0;
 		for (ImportedPet ip : in.pets()) {
 			String name = ip.name() == null || ip.name().isBlank() ? "Sin nombre" : cut(ip.name().trim(), 60);

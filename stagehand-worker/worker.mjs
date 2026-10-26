@@ -24,7 +24,10 @@ const Pet = z.object({
   ageMonths: z.number().int().min(0).max(360).describe("Edad aproximada en meses (1 año = 12)"),
   description: z.string().describe("Descripción de la ficha"),
 });
-const Page = z.object({ pets: z.array(Pet).max(10) });
+const Page = z.object({
+  foundation: z.string().describe("Nombre de la fundación o refugio que publica esta página (el título principal)"),
+  pets: z.array(Pet).max(10),
+});
 
 const log = async (entry) => {
   const line = JSON.stringify({ at: new Date().toISOString(), model: process.env.OPENROUTER_MODEL, headless: HEADLESS, ...entry });
@@ -110,8 +113,9 @@ async function extract(slug) {
     const pets = data.pets
       .filter((p) => p.name.trim() && photos[p.name.trim()]) // only cards that really exist on the page, with their photo
       .map((p) => ({ ...p, photoUrls: [photos[p.name.trim()]], sourceUrl: url }));
-    await log({ step: "extract", ms: Date.now() - startedAt, pets: pets.map((p) => `${p.name} (${p.species}, ${p.sex}, ${p.size}, ${p.ageMonths}m) ${p.photoUrls[0]}`), tokens: { ...usage } });
-    return pets;
+    const foundation = data.foundation.trim();
+    await log({ step: "extract", ms: Date.now() - startedAt, foundation, pets: pets.map((p) => `${p.name} (${p.species}, ${p.sex}, ${p.size}, ${p.ageMonths}m) ${p.photoUrls[0]}`), tokens: { ...usage } });
+    return { pets, foundation, url };
   } catch (e) {
     // Capture the page as it was when it failed (the "before" one is taken after the wait)
     try {
@@ -134,8 +138,8 @@ async function runJob(job) {
   try {
     // Inside the try: a budget failure marks the claimed job as failed instead of leaving it running
     const before = await checkBudget();
-    const pets = await withTimeout(extract(job.instagramHandle), MAX_RUN_MS);
-    const { created } = await api(`/internal/imports/${job.id}/pets`, { method: "POST", body: JSON.stringify({ pets }) });
+    const { pets, foundation, url } = await withTimeout(extract(job.instagramHandle), MAX_RUN_MS);
+    const { created } = await api(`/internal/imports/${job.id}/pets`, { method: "POST", body: JSON.stringify({ pets, foundationName: foundation, sourceUrl: url }) });
     await api(`/internal/imports/${job.id}/status`, { method: "POST", body: JSON.stringify({ status: "done", inputTokens: usage.input, outputTokens: usage.output }) });
     const after = await keyUsage();
     await log({ step: "done", job: job.id, created, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage, saldoUsd: after.limitRemaining });
@@ -154,9 +158,9 @@ async function main() {
   const [mode, slug] = process.argv.slice(2);
   if (mode === "dry") {
     const before = await checkBudget();
-    const pets = await withTimeout(extract(slug ?? "patas-del-avila"), MAX_RUN_MS);
+    const { pets, foundation } = await withTimeout(extract(slug ?? "patas-del-avila"), MAX_RUN_MS);
     const after = await keyUsage();
-    await log({ step: "dry-run", found: pets.length, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage, saldoUsd: after.limitRemaining });
+    await log({ step: "dry-run", foundation, found: pets.length, costUsd: +(after.usage - before.usage).toFixed(6), keyUsageUsd: after.usage, saldoUsd: after.limitRemaining });
     return;
   }
   if (!SECRET) throw Error("Falta INTERNAL_SECRET (ver .env.example)");
