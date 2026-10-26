@@ -1,0 +1,82 @@
+{
+  "nota": "Disparadas por la API durante el recorrido E2E del 26-oct: publicación aprobada, nueva solicitud y solicitud aprobada. SMTP de desarrollo (Ethereal: atrapa los correos, no los entrega). Sin headers, IPs ni credenciales.",
+  "flujo": "Petzo 2 · Notificaciones por correo",
+  "workflowId": "85wS83ohg0mNTyjB",
+  "ejecuciones": [
+    {
+      "execution": "427",
+      "status": "success",
+      "inicio": "2026-10-26T15:23:22.768Z",
+      "evento": "pet_approved",
+      "asunto": "¡Toby E2E ya está publicado en Petzo!",
+      "destinatario": "usuario ficticio @example.com",
+      "smtp": {
+        "aceptados": 1,
+        "rechazados": 0,
+        "respuesta": "250 Accepted"
+      },
+      "nodos": [
+        {
+          "nodo": "Webhook",
+          "estado": "success",
+          "ms": 0
+        },
+        {
+          "nodo": "Send email",
+          "estado": "success",
+          "ms": 563
+        }
+      ]
+    },
+    {
+      "execution": "428",
+      "status": "success",
+      "inicio": "2026-10-26T15:23:24.400Z",
+      "evento": "request_new",
+      "asunto": "Nueva solicitud para adoptar a Toby E2E",
+      "destinatario": "usuario ficticio @example.com",
+      "smtp": {
+        "aceptados": 1,
+        "rechazados": 0,
+        "respuesta": "250 Accepted"
+      },
+      "nodos": [
+        {
+          "nodo": "Webhook",
+          "estado": "success",
+          "ms": 0
+        },
+        {
+          "nodo": "Send email",
+          "estado": "success",
+          "ms": 683
+        }
+      ]
+    },
+    {
+      "execution": "429",
+      "status": "success",
+      "inicio": "2026-10-26T15:23:26.162Z",
+      "evento": "request_approved",
+      "asunto": "¡Aprobaron tu solicitud para Toby E2E!",
+      "destinatario": "usuario ficticio @example.com",
+      "smtp": {
+        "aceptados": 1,
+        "rechazados": 0,
+        "respuesta": "250 Accepted"
+      },
+      "nodos": [
+        {
+          "nodo": "Webhook",
+          "estado": "success",
+          "ms": 1
+        },
+        {
+          "nodo": "Send email",
+          "estado": "success",
+          "ms": 549
+        }
+      ]
+    }
+  ]
+}

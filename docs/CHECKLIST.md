@@ -11,7 +11,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] Proyecto Supabase propio y gratuito con BD, Storage y Auth en uso real (prueba de punta a punta del 25-oct)
 - [x] Correo y contraseña y Google, ambos por la API: correo probado contra Supabase real; Google probado el 25-oct en el panel y en el iPhone (Site URL de Supabase = la IP de la API en el wifi)
 - [x] Panel admin protegido por rol en el backend: 403 en vivo para usuarios normales y el admin entra con Google y lanza importaciones (25-oct)
-- [~] Dos flujos de n8n en staging, activos y con webhook firmado (403 sin secreto). Flujo 1 (moderación por OpenRouter) probado de punta a punta el 25-oct: ejecución 417, ~7 s, riesgo 90 y razón de la IA. Flujo 2: la API lo dispara y n8n lo ejecuta (ejecución 421), pero el nodo de correo falla con "connection timed out" porque la credencial **Petzo SMTP** no tiene contraseña (Cris). El túnel de cloudflared se cae al cambiar de red y hay que levantarlo de nuevo (Cris; la IA no tiene permiso para exponer la API)
+- [x] Dos flujos de n8n en staging, propios, activos y con webhook firmado (403 sin secreto), ambos disparados por la API en el recorrido real del 26-oct: flujo 1 moderación por OpenRouter (ejecuciones 417, 426: riesgo, motivo y callback a la API por el túnel) y flujo 2 correo por SMTP de desarrollo Ethereal (ejecuciones 427–429: publicación aprobada, nueva solicitud y solicitud aprobada, "250 Accepted"). Evidencia sin secretos en `docs/evidencia/n8n/`
 - [x] Stagehand: importación completa el 25-oct: el admin la lanza en el panel, el worker lee la página en Chrome real y la API crea 4 borradores con su foto en Storage (log y capturas en `docs/evidencia/stagehand/`). Se corrigió que el modelo no devolvía la URL de la foto: ahora la toma el código
 - [x] Skills y agentes registrados con qué se les encargó y cómo se comprobó (`docs/SKILLS_LOG.md`, `docs/AGENTS_LOG.md` en ambos repos)
 - [x] Modelo de Stagehand elegido y justificado con medición (`stagehand-worker/README.md`, D-11 del registro); el 26-oct se agregaron la comparación con ventana y headless, el proveedor (OpenAI), la captura en fallo y el flujo observe → act → extract con tope de llamadas y límite de gasto, como pide la guía
@@ -24,7 +24,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] URLs de los dos repos, commit final y ubicación del panel y de Stagehand en `Desktop/petzo/ENTREGA.md` (se actualiza en cada push)
 - [x] README desde cero en ambos repos (versiones, variables, Supabase, Google, arranque, usuario y admin de prueba, API, limitaciones). Probado el 26-oct con un clon limpio de GitHub: encontró y se corrigió un `npm ci` roto en la app
 - [ ] Video de 3–5 min (Cris)
-- [~] Enlaces y evidencia de ejecución de los 2 flujos de n8n: enlaces en `ENTREGA.md`; flujo 1 con su ejecución 417 exportada sin secretos en `docs/evidencia/n8n/`. Falta el flujo 2: necesita la credencial SMTP (Cris); luego la IA exporta su ejecución y Cris toma las capturas de *Executions*
+- [x] Enlaces y evidencia de ejecución de los 2 flujos de n8n: enlaces en `ENTREGA.md`; ejecuciones exportadas sin secretos en `docs/evidencia/n8n/` (417 y 426 moderación, 427–429 correo). Las capturas de *Executions* las toma Cris como complemento
 - [x] Stagehand: ruta, comando, tarea, modelo y versión, resultado, log, captura y costo (`stagehand-worker/README.md`, `docs/evidencia/stagehand/`)
 - [x] Registro de decisiones `docs/DECISIONS.md`, enlazado desde ambos README
 
@@ -55,7 +55,7 @@ Sprints B0–B4 de SPEC §16. `[x]` hecho y probado · `[~]` parcial o depende d
 - [x] Worker Stagehand (`stagehand-worker/`) + `import_jobs`
 - [x] Flujos importados en n8n staging por su API, con credenciales propias y activos
 - [x] Corrida real de moderación (ejecución 417) e importación con Stagehand (4 borradores con foto, 25-oct)
-- [~] Corrida real de correo: la API dispara el flujo 2 (ejecución 421); falta la contraseña de la credencial SMTP (Cris)
+- [x] Corrida real de correo: la API dispara el flujo 2 y Ethereal acepta los 3 correos del recorrido (ejecuciones 427–429). Antes fallaba con "connection timed out" porque la credencial de Gmail no tenía contraseña
 
 ## B4 API lista — paso al frontend
 - [x] Suite completa en verde

@@ -29,7 +29,7 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [240, 0],
-      "credentials": { "smtp": { "id": "", "name": "Petzo SMTP" } }
+      "credentials": { "smtp": { "id": "", "name": "Petzo SMTP (Ethereal)" } }
     }
   ],
   "connections": {

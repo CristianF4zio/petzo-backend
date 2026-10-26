@@ -1,0 +1,51 @@
+{
+  "nota": "Disparada por la API al enviar una publicación a revisión (recorrido E2E del 26-oct). Exportada con GET /api/v1/executions/{id}; sin headers, IPs ni credenciales.",
+  "flujo": "Petzo 1 · Moderación",
+  "workflowId": "HXMbmyDDrUn1FlDG",
+  "execution": "426",
+  "status": "success",
+  "inicio": "2026-10-26T15:23:14.326Z",
+  "fin": "2026-10-26T15:23:20.304Z",
+  "nodos": [
+    {
+      "nodo": "Webhook",
+      "estado": "success",
+      "ms": 1
+    },
+    {
+      "nodo": "OpenRouter gpt-4.1-mini",
+      "estado": "success",
+      "ms": 3651
+    },
+    {
+      "nodo": "Parse result",
+      "estado": "success",
+      "ms": 1476
+    },
+    {
+      "nodo": "Petzo callback",
+      "estado": "success",
+      "ms": 785
+    }
+  ],
+  "ia": {
+    "modelo": "openai/gpt-4.1-mini",
+    "proveedor": "OpenAI",
+    "tokens": {
+      "entrada": 620,
+      "salida": 39,
+      "costoUsd": 0.0003104
+    }
+  },
+  "resultado": {
+    "petId": "b82a5cca-0e10-4ed3-97e4-47c9272b5c77",
+    "riskScore": 90,
+    "reason": "La imagen es una foto de prueba genérica, no muestra al animal, lo que indica posible fraude o publicación de prueba no real.",
+    "version": 2,
+    "inputTokens": 620,
+    "outputTokens": 39
+  },
+  "callback": {
+    "status": "pending_review"
+  }
+}

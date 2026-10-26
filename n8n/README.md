@@ -13,7 +13,7 @@ Dos flujos. La API los llama por webhook; ambos exigen el header `x-internal-sec
 2. Crea 3 credenciales (**Credentials → New**):
    - **Petzo internal secret** (tipo *Header Auth*): Name `x-internal-secret`, Value = `INTERNAL_SECRET` del backend.
    - **OpenRouter API key** (tipo *Header Auth*): Name `Authorization`, Value = `Bearer <clave de OpenRouter>`.
-   - **Petzo SMTP** (tipo *SMTP*): Gmail de desarrollo → host `smtp.gmail.com`, puerto `465`, SSL, usuario = tu Gmail, contraseña = una [contraseña de aplicación](https://myaccount.google.com/apppasswords) (no tu contraseña normal).
+   - **Petzo SMTP (Ethereal)** (tipo *SMTP*): cuenta de desarrollo de [ethereal.email](https://ethereal.email) (*Create Ethereal Account*): host `smtp.ethereal.email`, puerto `587`, SSL/TLS apagado, usuario y contraseña los que da Ethereal. Atrapa los correos sin entregarlos (se ven en su *Mailbox*), así no se usa una cuenta personal. Alternativa: Gmail con [contraseña de aplicación](https://myaccount.google.com/apppasswords), host `smtp.gmail.com`, puerto `465`, SSL.
 3. En **Petzo 1**, nodo *Petzo callback*: reemplaza `https://REPLACE-WITH-PETZO-API` por la URL del túnel (ver abajo).
 4. En **Petzo 2**, nodo *Send email*: reemplaza el remitente.
 5. Activa ambos flujos y copia sus **Production URL** en el `.env` del backend:
@@ -31,6 +31,8 @@ El reto usa `https://staging-n8n.dir5ad.easypanel.host` (solo tus propios workfl
 cloudflared tunnel --no-autoupdate --url http://localhost:8090
 # imprime https://<algo>.trycloudflare.com → pégala en el nodo "Petzo callback" (cambia en cada arranque)
 ```
+
+Después de cambiar la URL en un flujo **activo**, desactívalo y actívalo de nuevo: n8n sigue ejecutando la versión publicada hasta entonces. Si la red cambia (otra IP o wifi), el túnel rápido muere ("Tunnel not found") y hay que levantarlo otra vez; comprueba que su nombre ya resuelva en DNS público antes de probar (`https://dns.google/resolve?name=<host>`).
 
 `/internal/**` sigue protegido por `x-internal-secret` aunque el túnel sea público. El nodo *Parse result* es un Code node que solo parsea la respuesta del modelo (no lee variables del servidor).
 
