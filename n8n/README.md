@@ -30,6 +30,7 @@ El reto usa `https://staging-n8n.dir5ad.easypanel.host` (solo tus propios workfl
 ```bash
 cloudflared tunnel --no-autoupdate --url http://localhost:8090
 # imprime https://<algo>.trycloudflare.com → pégala en el nodo "Petzo callback" (cambia en cada arranque)
+# si no la ves en la terminal: curl http://127.0.0.1:20241/quicktunnel  → {"hostname":"<algo>.trycloudflare.com"}
 ```
 
 Después de cambiar la URL en un flujo **activo**, desactívalo y actívalo de nuevo: n8n sigue ejecutando la versión publicada hasta entonces. Si la red cambia (otra IP o wifi), el túnel rápido muere ("Tunnel not found") y hay que levantarlo otra vez; comprueba que su nombre ya resuelva en DNS público antes de probar (`https://dns.google/resolve?name=<host>`).
