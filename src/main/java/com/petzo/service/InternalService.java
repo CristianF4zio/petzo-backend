@@ -135,7 +135,8 @@ public class InternalService {
 	}
 
 	/**
-	 * Drafts belong to the verified foundation with that Instagram handle, else to the admin who launched the import.
+	 * Imported pets belong to the verified foundation with that handle, else to the admin who launched the import.
+	 * With a photo they are sent to moderation right away (then Explorar once approved); without one they stay drafts.
 	 * Not transactional: image downloads (slow) must not hold a DB connection; each save commits on its own.
 	 */
 	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
@@ -176,7 +177,12 @@ public class InternalService {
 					saved.photos.add(ph);
 				});
 			}
-			if (!saved.photos.isEmpty()) pets.save(saved);
+			// With a photo it goes straight to moderation (n8n + admin), like a post from the app, so it can reach Explorar;
+			// without one it stays a draft (moderation requires at least one photo)
+			if (!saved.photos.isEmpty()) {
+				saved.status = PetStatus.pending_review;
+				events.moderate(pets.saveAndFlush(saved));
+			}
 			created++;
 		}
 		job.petsCreated += created;

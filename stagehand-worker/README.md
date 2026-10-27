@@ -8,7 +8,7 @@ Abre en un Chrome real la página de una fundación, pulsa "Ver mascotas en adop
 | Versión | `@browserbasehq/stagehand` **4.3.0** (fijada), `zod ~4.4.3`, `openai`, `dotenv`; Node ≥ 22.18 y Chrome instalado |
 | Modelo | `openai/gpt-4.1-mini` vía OpenRouter (D-32, comparación abajo) |
 | Sitio | Página propia y ficticia: `GET /demo/fundaciones/patas-del-avila.html` servida por la API (`src/main/resources/static/demo/`). Instagram se descartó: exige login y sus términos prohíben el scraping |
-| Resultado esperado | 4 borradores (Luna, Toby, Canela, Simón) con especie, sexo, tamaño, edad en meses, descripción y su foto subida a Storage por la API |
+| Resultado esperado | 4 mascotas (Luna, Toby, Canela, Simón) con especie, sexo, tamaño, edad en meses, descripción, su foto subida a Storage por la API y el nombre de la fundación. Con foto quedan "En revisión" y van a la moderación de n8n; aprobadas aparecen en Explorar |
 
 ## Correr
 
