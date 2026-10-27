@@ -136,15 +136,17 @@ public class InternalService {
 
 	/**
 	 * Imported pets belong to the verified foundation with that handle, else to the admin who launched the import.
-	 * With a photo they are sent to moderation right away (then Explorar once approved); without one they stay drafts.
+	 * With a photo: a verified foundation's pets are published right away (the admin already vetted the foundation, so
+	 * they show in Explorar); any other source goes to moderation (n8n + admin). Without a photo they stay drafts.
 	 * Not transactional: image downloads (slow) must not hold a DB connection; each save commits on its own.
 	 */
 	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 	public int addImportedPets(UUID jobId, ImportedPets in) {
 		ImportJob job = jobs.findById(jobId).orElseThrow(ApiException::notFound);
 		if (job.status != ImportStatus.running) throw ApiException.conflict("INVALID_STATUS", "El trabajo no está en curso");
-		Profile owner = profiles.findFirstByFoundationInstagramIgnoreCaseAndVerificationStatus(job.instagramHandle, VerificationStatus.verified)
-				.orElseGet(() -> profiles.findById(job.requestedBy).orElseThrow());
+		Optional<Profile> foundation = profiles.findFirstByFoundationInstagramIgnoreCaseAndVerificationStatus(job.instagramHandle, VerificationStatus.verified);
+		Profile owner = foundation.orElseGet(() -> profiles.findById(job.requestedBy).orElseThrow());
+		boolean trusted = foundation.isPresent();
 		if (in.foundationName() != null && !in.foundationName().isBlank()) job.foundationName = cut(in.foundationName().trim(), 120);
 		if (in.sourceUrl() != null && !in.sourceUrl().isBlank()) job.sourceUrl = cut(in.sourceUrl(), 500);
 		int created = 0;
@@ -177,11 +179,11 @@ public class InternalService {
 					saved.photos.add(ph);
 				});
 			}
-			// With a photo it goes straight to moderation (n8n + admin), like a post from the app, so it can reach Explorar;
-			// without one it stays a draft (moderation requires at least one photo)
 			if (!saved.photos.isEmpty()) {
-				saved.status = PetStatus.pending_review;
-				events.moderate(pets.saveAndFlush(saved));
+				saved.status = trusted ? PetStatus.approved : PetStatus.pending_review;
+				Pet stored = pets.saveAndFlush(saved);
+				if (trusted) events.petStatusChanged(stored); // "ya está publicado" email to the foundation
+				else events.moderate(stored);
 			}
 			created++;
 		}
