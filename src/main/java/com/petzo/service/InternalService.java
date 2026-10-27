@@ -115,6 +115,9 @@ public class InternalService {
 			log.warn("scheduled import skipped: no admin to own the drafts");
 			return 0;
 		}
+		// A worker that died mid-run (or lost the API) leaves its job "running" forever, which would block every later run
+		int stale = jdbc.update("update import_jobs set status = 'failed', error = 'Sin respuesta del worker' where status = 'running' and created_at < now() - interval '15 minutes'");
+		if (stale > 0) log.warn("stale import jobs marked failed: {}", stale);
 		int queued = 0;
 		for (String handle : props.importAutoHandles() == null ? List.<String>of() : props.importAutoHandles()) {
 			if (handle.isBlank() || jobs.existsByInstagramHandleAndStatusIn(handle, List.of(ImportStatus.queued, ImportStatus.running))) continue;
